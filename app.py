@@ -34,7 +34,7 @@ st.session_state.setdefault("selected_employee_position", "Social Media & Digita
 def toggle_theme():
     st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
 
-# ================= DYNAMIC CSS (Mobile‑friendly, Dark/Light) =================
+# ================= DYNAMIC CSS =================
 theme = st.session_state.theme
 bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
 bg_secondary = "rgba(20,20,40,0.85)" if theme == "dark" else "rgba(255,255,255,0.85)"
@@ -403,31 +403,69 @@ def clear_history():
     if os.path.exists(HISTORY_FILE):
         os.remove(HISTORY_FILE)
 
-# ============= JSON PARSER =============
+# ============= ROBUST JSON PARSER (FIX) =============
 def extract_and_clean_json(raw_text):
+    """
+    Robust JSON extractor with fallback.
+    Tries multiple strategies to extract valid JSON from the AI response.
+    """
+    # Remove markdown code fences
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
+    
+    # Step 1: Try to find the JSON object via regex
     start = raw_text.find('{')
     end = raw_text.rfind('}')
-    if start == -1 or end == -1:
-        raise ValueError("No JSON object found")
-    json_str = raw_text[start:end+1]
+    if start != -1 and end != -1:
+        json_str = raw_text[start:end+1]
+    else:
+        # If no braces found, try to find a Python dict literal
+        start = raw_text.find('[')
+        end = raw_text.rfind(']')
+        if start != -1 and end != -1:
+            json_str = raw_text[start:end+1]
+        else:
+            raise ValueError("No JSON-like structure found in response")
+    
+    # Step 2: Try direct parsing
     try:
         return json.loads(json_str)
-    except:
+    except json.JSONDecodeError:
         pass
+    
+    # Step 3: Fix unquoted keys (e.g., {key: value} -> {"key": value})
     json_str = re.sub(r'([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', json_str)
+    
+    # Step 4: Remove trailing commas (e.g., { "a":1, } -> { "a":1 })
     json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+    
+    # Step 5: Try parsing again
     try:
         return json.loads(json_str)
-    except:
+    except json.JSONDecodeError:
         pass
+    
+    # Step 6: Convert single quotes to double quotes (careful with apostrophes)
+    # We'll use ast.literal_eval which handles single quotes.
     try:
+        # Convert JSON null/true/false to Python None/True/False for ast.literal_eval
         py_str = json_str.replace('null', 'None').replace('true', 'True').replace('false', 'False')
         return ast.literal_eval(py_str)
-    except:
+    except (SyntaxError, ValueError):
         pass
-    raise ValueError("Could not parse JSON")
+    
+    # Step 7: Final fallback – return a default schedule
+    # This ensures the app never crashes
+    st.warning("AI response could not be parsed. Using a default schedule.")
+    return {
+        "employee_name": "",
+        "position": "",
+        "date": "",
+        "schedule": [
+            {"slot": s, "activity": "No data", "description": "AI response was invalid"} 
+            for s in TIME_SLOTS
+        ]
+    }
 
 # ============= AI GENERATION =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, progress_callback=None):
@@ -506,7 +544,22 @@ Date: {report_date}
     if progress_callback:
         progress_callback(80, "Parsing AI response...")
 
-    data = extract_and_clean_json(raw)
+    # Use robust JSON parser with fallback
+    try:
+        data = extract_and_clean_json(raw)
+    except Exception as e:
+        st.warning(f"Could not parse AI response: {e}. Using default schedule.")
+        data = {
+            "employee_name": employee_name,
+            "position": position,
+            "date": report_date,
+            "schedule": [
+                {"slot": slot, "activity": "No activity", "description": "Could not generate from AI"} 
+                for slot in TIME_SLOTS
+            ]
+        }
+
+    # Ensure schedule is complete
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
@@ -627,7 +680,6 @@ def create_pdf(schedule_data, template_bytes=None):
 
     try:
         # Attempt LibreOffice conversion (headless)
-        # 'soffice' must be in PATH (or specify full path)
         subprocess.run([
             'soffice',
             '--headless',
