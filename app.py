@@ -39,14 +39,12 @@ def parse_date(date_str):
     """Extract YYYY-MM-DD from any string, fallback to today."""
     if not date_str:
         return datetime.now().date()
-    # Try to find a YYYY-MM-DD pattern
     match = re.search(r'(\d{4}-\d{2}-\d{2})', date_str)
     if match:
         try:
             return datetime.strptime(match.group(1), "%Y-%m-%d").date()
         except ValueError:
             pass
-    # Fallback
     return datetime.now().date()
 
 # ================= DYNAMIC CSS =================
@@ -420,63 +418,40 @@ def clear_history():
 
 # ============= ROBUST JSON PARSER =============
 def extract_and_clean_json(raw_text):
-    """
-    Robust JSON extractor with fallback.
-    Tries multiple strategies to extract valid JSON from the AI response.
-    """
-    # Remove markdown code fences
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
-    
-    # Step 1: Try to find the JSON object via regex
     start = raw_text.find('{')
     end = raw_text.rfind('}')
     if start != -1 and end != -1:
         json_str = raw_text[start:end+1]
     else:
-        # If no braces found, try to find a Python dict literal
         start = raw_text.find('[')
         end = raw_text.rfind(']')
         if start != -1 and end != -1:
             json_str = raw_text[start:end+1]
         else:
             raise ValueError("No JSON-like structure found in response")
-    
-    # Step 2: Try direct parsing
     try:
         return json.loads(json_str)
     except json.JSONDecodeError:
         pass
-    
-    # Step 3: Fix unquoted keys (e.g., {key: value} -> {"key": value})
     json_str = re.sub(r'([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', json_str)
-    
-    # Step 4: Remove trailing commas (e.g., { "a":1, } -> { "a":1 })
     json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
-    
-    # Step 5: Try parsing again
     try:
         return json.loads(json_str)
     except json.JSONDecodeError:
         pass
-    
-    # Step 6: Convert single quotes to double quotes using ast.literal_eval
     try:
         py_str = json_str.replace('null', 'None').replace('true', 'True').replace('false', 'False')
         return ast.literal_eval(py_str)
     except (SyntaxError, ValueError):
         pass
-    
-    # Step 7: Final fallback – return a default schedule
     st.warning("AI response could not be parsed. Using a default schedule.")
     return {
         "employee_name": "",
         "position": "",
         "date": "",
-        "schedule": [
-            {"slot": s, "activity": "No data", "description": "AI response was invalid"} 
-            for s in TIME_SLOTS
-        ]
+        "schedule": [{"slot": s, "activity": "No data", "description": "AI response was invalid"} for s in TIME_SLOTS]
     }
 
 # ============= AI GENERATION =============
@@ -556,7 +531,6 @@ Date: {report_date}
     if progress_callback:
         progress_callback(80, "Parsing AI response...")
 
-    # Use robust JSON parser with fallback
     try:
         data = extract_and_clean_json(raw)
     except Exception as e:
@@ -565,13 +539,9 @@ Date: {report_date}
             "employee_name": employee_name,
             "position": position,
             "date": report_date,
-            "schedule": [
-                {"slot": slot, "activity": "No activity", "description": "Could not generate from AI"} 
-                for slot in TIME_SLOTS
-            ]
+            "schedule": [{"slot": slot, "activity": "No activity", "description": "Could not generate from AI"} for slot in TIME_SLOTS]
         }
 
-    # Ensure schedule is complete
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
@@ -821,7 +791,6 @@ def display_report(data, template_bytes, emp_name):
     excel_data = create_excel(data, template_bytes)
     pdf_data = create_pdf(data, template_bytes)
 
-    # ----- FIX: Robust date parsing -----
     file_date = parse_date(data.get("date", ""))
     excel_filename = generate_filename(file_date, emp_name, "xlsx")
     pdf_filename = generate_filename(file_date, emp_name, "pdf")
@@ -1049,7 +1018,8 @@ with left_col:
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
     report_date = st.date_input("📅 Date", value=datetime.now())
 
-    user_tasks = st.text_area("✍️ Task summary", height=80,
+    # ---- Increased height for task summary ----
+    user_tasks = st.text_area("✍️ Task summary", height=220,
                               placeholder="e.g., Created 3 Instagram stories...",
                               key="task_area")
 
