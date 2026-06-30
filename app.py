@@ -24,6 +24,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# ================= HIDE FOOTER (GitHub icon) =================
+st.markdown("""
+<style>
+    footer {visibility: hidden;}
+    .stAppFooter {display: none;}
+</style>
+""", unsafe_allow_html=True)
+
 # ================= THEME STATE =================
 if "theme" not in st.session_state:
     st.session_state.theme = "dark"
@@ -857,7 +865,6 @@ saved_api_key = config.get("api_key", "")
 # ---- Sidebar ----
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/google-forms.png", width=25)
-    # Fixed button – uses session state directly to avoid NameError
     if st.button(f"🌓 Switch to {'Light' if st.session_state.theme == 'dark' else 'Dark'} Theme", use_container_width=True):
         toggle_theme()
         st.rerun()
