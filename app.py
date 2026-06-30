@@ -34,6 +34,21 @@ st.session_state.setdefault("selected_employee_position", "Social Media & Digita
 def toggle_theme():
     st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
 
+# ================= ROBUST DATE PARSER =================
+def parse_date(date_str):
+    """Extract YYYY-MM-DD from any string, fallback to today."""
+    if not date_str:
+        return datetime.now().date()
+    # Try to find a YYYY-MM-DD pattern
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', date_str)
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%Y-%m-%d").date()
+        except ValueError:
+            pass
+    # Fallback
+    return datetime.now().date()
+
 # ================= DYNAMIC CSS =================
 theme = st.session_state.theme
 bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
@@ -403,7 +418,7 @@ def clear_history():
     if os.path.exists(HISTORY_FILE):
         os.remove(HISTORY_FILE)
 
-# ============= ROBUST JSON PARSER (FIX) =============
+# ============= ROBUST JSON PARSER =============
 def extract_and_clean_json(raw_text):
     """
     Robust JSON extractor with fallback.
@@ -445,17 +460,14 @@ def extract_and_clean_json(raw_text):
     except json.JSONDecodeError:
         pass
     
-    # Step 6: Convert single quotes to double quotes (careful with apostrophes)
-    # We'll use ast.literal_eval which handles single quotes.
+    # Step 6: Convert single quotes to double quotes using ast.literal_eval
     try:
-        # Convert JSON null/true/false to Python None/True/False for ast.literal_eval
         py_str = json_str.replace('null', 'None').replace('true', 'True').replace('false', 'False')
         return ast.literal_eval(py_str)
     except (SyntaxError, ValueError):
         pass
     
     # Step 7: Final fallback – return a default schedule
-    # This ensures the app never crashes
     st.warning("AI response could not be parsed. Using a default schedule.")
     return {
         "employee_name": "",
@@ -662,16 +674,14 @@ def create_excel(schedule_data, template_bytes=None):
     output.seek(0)
     return output
 
-# ============= PDF GENERATION (LibreOffice + Fallback) =============
+# ============= PDF GENERATION =============
 def create_pdf(schedule_data, template_bytes=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
 
-    # Generate the Excel file
     excel_bytes = create_excel(schedule_data, template_bytes)
     excel_data = excel_bytes.getvalue()
 
-    # Save to a temporary .xlsx file
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_xlsx:
         tmp_xlsx.write(excel_data)
         xlsx_path = tmp_xlsx.name
@@ -679,7 +689,6 @@ def create_pdf(schedule_data, template_bytes=None):
     pdf_path = xlsx_path.replace('.xlsx', '.pdf')
 
     try:
-        # Attempt LibreOffice conversion (headless)
         subprocess.run([
             'soffice',
             '--headless',
@@ -688,23 +697,19 @@ def create_pdf(schedule_data, template_bytes=None):
             xlsx_path
         ], check=True, timeout=60)
 
-        # Read the generated PDF
         with open(pdf_path, 'rb') as f:
             pdf_bytes = f.read()
 
-        # Clean up
         os.unlink(xlsx_path)
         os.unlink(pdf_path)
 
         return BytesIO(pdf_bytes)
 
     except (subprocess.CalledProcessError, FileNotFoundError, Exception) as e:
-        # If LibreOffice fails, clean up and fall back to reportlab
         if os.path.exists(xlsx_path):
             os.unlink(xlsx_path)
         if os.path.exists(pdf_path):
             os.unlink(pdf_path)
-        # Optionally show a warning (only once)
         st.warning("LibreOffice not available. Using fallback PDF (formatting may differ).")
         return create_fallback_pdf(schedule_data)
 
@@ -816,7 +821,8 @@ def display_report(data, template_bytes, emp_name):
     excel_data = create_excel(data, template_bytes)
     pdf_data = create_pdf(data, template_bytes)
 
-    file_date = datetime.strptime(data.get("date", "2026-06-30"), "%Y-%m-%d").date()
+    # ----- FIX: Robust date parsing -----
+    file_date = parse_date(data.get("date", ""))
     excel_filename = generate_filename(file_date, emp_name, "xlsx")
     pdf_filename = generate_filename(file_date, emp_name, "pdf")
 
@@ -838,7 +844,7 @@ def display_report(data, template_bytes, emp_name):
             use_container_width=True
         )
 
-# ============= CONFETTI COMPONENT =============
+# ============= CONFETTI =============
 def confetti():
     st.components.v1.html("""
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
