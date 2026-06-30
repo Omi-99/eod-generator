@@ -46,8 +46,241 @@ def parse_date(date_str):
             pass
     return datetime.now().date()
 
-# ================= DYNAMIC CSS (unchanged) =================
-# (keeping the same CSS as before – omitted for brevity but included in full code below)
+# ================= DYNAMIC CSS =================
+theme = st.session_state.theme
+bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
+bg_secondary = "rgba(20,20,40,0.85)" if theme == "dark" else "rgba(255,255,255,0.85)"
+text_color = "#ffffff" if theme == "dark" else "#000000"
+card_bg = "rgba(30,30,50,0.6)" if theme == "dark" else "rgba(255,255,255,0.7)"
+border_color = "rgba(255,255,255,0.15)" if theme == "dark" else "rgba(0,0,0,0.1)"
+shadow_color = "rgba(0,0,0,0.3)" if theme == "dark" else "rgba(0,0,0,0.1)"
+header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+preview_bg = "rgba(255,255,255,0.08)" if theme == "dark" else "white"
+preview_border = "#444" if theme == "dark" else "#ddd"
+table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
+table_text = "#ffffff" if theme == "dark" else "#000000"
+table_border = "#555" if theme == "dark" else "#ddd"
+
+st.markdown(f"""
+<style>
+    .stApp {{
+        background: {bg_primary};
+        color: {text_color};
+        transition: background 0.3s ease, color 0.3s ease;
+    }}
+    .block-container {{
+        padding: 0.6rem 0.8rem 0.3rem 0.8rem !important;
+        max-width: 100% !important;
+    }}
+    .main-header {{
+        background: {header_grad};
+        background-size: 200% 200%;
+        animation: gradientMove 6s ease infinite;
+        padding: 0.5rem 0.6rem;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        margin-bottom: 0.4rem;
+        margin-top: 0.4rem;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    }}
+    @keyframes gradientMove {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
+    .main-header h1 {{
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.3;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }}
+    .main-header p {{
+        font-size: 0.75rem;
+        opacity: 0.9;
+        margin: 0;
+        line-height: 1.3;
+    }}
+    .glass-card {{
+        background: {card_bg};
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 12px;
+        padding: 0.4rem 0.6rem;
+        margin-bottom: 0.4rem;
+        box-shadow: 0 4px 20px {shadow_color};
+        border: 1px solid {border_color};
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.6s ease;
+    }}
+    .glass-card:hover {{
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px {shadow_color};
+    }}
+    @keyframes fadeInUp {{
+        0% {{ opacity: 0; transform: translateY(20px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .preview-card {{
+        border: 1px solid {preview_border};
+        border-radius: 10px;
+        padding: 8px 12px;
+        background: {preview_bg};
+        box-shadow: 0 4px 15px {shadow_color};
+        margin-bottom: 6px;
+        backdrop-filter: blur(8px);
+        transition: all 0.4s ease;
+        animation: slideUp 0.8s ease;
+        color: {text_color};
+    }}
+    @keyframes slideUp {{
+        0% {{ opacity: 0; transform: translateY(40px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .preview-title {{ font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }}
+    .preview-detail {{ display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid {preview_border}; font-size: 13px; }}
+    .preview-detail-label {{ font-weight: bold; width: 100px; }}
+    .preview-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+        font-size: 12px;
+        color: {table_text};
+    }}
+    .preview-table th {{
+        background-color: {table_header_bg};
+        font-weight: bold;
+        border: 1px solid {table_border};
+        padding: 3px 6px;
+        text-align: left;
+        color: {text_color};
+    }}
+    .preview-table td {{
+        border: 1px solid {table_border};
+        padding: 3px 6px;
+        text-align: left;
+    }}
+    .stTextInput, .stDateInput, .stSelectbox, .stTextArea {{ margin-bottom: 0.1rem !important; }}
+    .stButton button {{
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background: {header_grad} !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4) !important;
+        min-height: 44px !important;
+        width: 100% !important;
+    }}
+    .stButton button:hover {{
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6) !important;
+    }}
+    .stDownloadButton button {{
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background: #28a745 !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(40, 167, 69, 0.4) !important;
+        min-height: 44px !important;
+        width: 100% !important;
+    }}
+    .stDownloadButton button:hover {{
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.6) !important;
+    }}
+    .stDownloadButton button:nth-of-type(2) {{
+        background: #dc3545 !important;
+        box-shadow: 0 2px 10px rgba(220, 53, 69, 0.4) !important;
+    }}
+    .stDownloadButton button:nth-of-type(2):hover {{
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6) !important;
+    }}
+    .css-1d391kg {{
+        background: {bg_secondary} !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: {text_color} !important;
+        padding: 0.2rem 0.3rem !important;
+        border-right: 1px solid {border_color} !important;
+        box-shadow: 4px 0 30px {shadow_color} !important;
+        transition: all 0.3s ease;
+    }}
+    .css-1d391kg * {{
+        font-size: 0.8rem !important;
+        color: {text_color} !important;
+    }}
+    .css-1d391kg .stSelectbox select,
+    .css-1d391kg .stTextInput input,
+    .css-1d391kg .stDateInput input {{
+        background: rgba(60, 60, 90, 0.5) !important;
+        color: {text_color} !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 6px !important;
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.4rem !important;
+        height: 2.2rem !important;
+        backdrop-filter: blur(4px) !important;
+    }}
+    .css-1d391kg .stButton button {{
+        background: rgba(120, 120, 200, 0.7) !important;
+        color: {text_color} !important;
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.6rem !important;
+        height: 2rem !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 6px !important;
+        backdrop-filter: blur(4px) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+        min-height: 38px !important;
+    }}
+    .css-1d391kg .stButton button:hover {{
+        background: rgba(150, 150, 220, 0.9) !important;
+        transform: scale(1.02);
+    }}
+    .css-1d391kg .stExpander {{
+        border: 1px solid {border_color} !important;
+        background: rgba(40, 40, 60, 0.4) !important;
+        border-radius: 8px !important;
+        padding: 0.1rem 0.2rem !important;
+        backdrop-filter: blur(8px) !important;
+        margin-bottom: 0.2rem !important;
+    }}
+    .css-1d391kg .stExpander .stExpanderHeader {{
+        color: {text_color} !important;
+        background: rgba(40, 40, 60, 0.2) !important;
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 6px !important;
+    }}
+    .css-1d391kg hr {{
+        border-color: {border_color} !important;
+        margin: 0.15rem 0 !important;
+    }}
+    .css-1d391kg .stImage {{
+        margin-bottom: 0.1rem !important;
+        filter: drop-shadow(0 0 8px rgba(102, 126, 234, 0.3)) !important;
+    }}
+    @media (max-width: 768px) {{
+        .main-header h1 {{ font-size: 1.2rem !important; }}
+        .main-header p {{ font-size: 0.7rem !important; }}
+        .stButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
+        .stDownloadButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
+        .preview-table {{ font-size: 10px !important; }}
+        .preview-table th, .preview-table td {{ padding: 2px 4px !important; }}
+        .css-1d391kg {{ padding: 0.1rem 0.2rem !important; }}
+        .css-1d391kg * {{ font-size: 0.7rem !important; }}
+        .css-1d391kg .stButton button {{ font-size: 0.7rem !important; padding: 0.1rem 0.3rem !important; min-height: 34px !important; }}
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 CONFIG_FILE = ".eod_config.json"
@@ -182,16 +415,10 @@ def clear_history():
     if os.path.exists(HISTORY_FILE):
         os.remove(HISTORY_FILE)
 
-# ============= IMPROVED JSON PARSER WITH ERROR CONTEXT =============
+# ============= ROBUST JSON PARSER =============
 def extract_and_clean_json(raw_text):
-    """
-    Robust JSON extractor with fallback.
-    """
-    # Remove markdown code fences
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
-    
-    # Try to find JSON object
     start = raw_text.find('{')
     end = raw_text.rfind('}')
     if start != -1 and end != -1:
@@ -202,40 +429,29 @@ def extract_and_clean_json(raw_text):
         if start != -1 and end != -1:
             json_str = raw_text[start:end+1]
         else:
-            raise ValueError("No JSON-like structure found in response")
-    
-    # Try direct parsing
+            raise ValueError("No JSON-like structure found")
     try:
         return json.loads(json_str)
-    except json.JSONDecodeError:
+    except:
         pass
-    
-    # Fix unquoted keys
     json_str = re.sub(r'([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', json_str)
-    # Remove trailing commas
     json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
-    
     try:
         return json.loads(json_str)
-    except json.JSONDecodeError:
+    except:
         pass
-    
-    # Use ast.literal_eval as last resort
     try:
         py_str = json_str.replace('null', 'None').replace('true', 'True').replace('false', 'False')
         return ast.literal_eval(py_str)
-    except (SyntaxError, ValueError):
+    except:
         pass
-    
-    # If all fails, raise with the raw text for debugging
-    raise ValueError(f"Could not parse JSON. Raw response: {raw_text[:200]}...")
+    raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION WITH BETTER ERROR HANDLING =============
+# ============= AI GENERATION =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, progress_callback=None):
-    # Validate API key if required
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"API key for {provider} is missing. Please enter it in the sidebar.")
-    
+
     non_lunch_slots = [s for s in TIME_SLOTS if s != LUNCH_SLOT]
     slot_list = "\n".join([f"- {s}" for s in non_lunch_slots])
     prompt = f"""
@@ -262,7 +478,6 @@ Date: {report_date}
     timeout_seconds = 60 if provider == "Ollama (local)" else 30
     max_retries = 2
     last_error = None
-    
     for attempt in range(max_retries):
         if progress_callback:
             progress_callback(30 + attempt * 20, f"Contacting AI ({provider})...")
@@ -315,20 +530,16 @@ Date: {report_date}
                 raw = response.choices[0].message.content
             else:
                 raise ValueError("Unsupported provider")
-            
-            # Try to parse JSON
             try:
                 data = extract_and_clean_json(raw)
-                break  # success
+                break
             except Exception as parse_error:
                 last_error = f"JSON parsing error: {parse_error}"
                 if attempt == max_retries - 1:
-                    # If last attempt, raise with the raw response for debugging
                     raise RuntimeError(f"Could not parse AI response: {raw[:300]}...\nError: {parse_error}")
                 else:
                     time.sleep(1)
                     continue
-        
         except Exception as e:
             last_error = str(e)
             if attempt == max_retries - 1:
@@ -337,10 +548,8 @@ Date: {report_date}
                 time.sleep(2)
                 continue
     else:
-        # If we exhausted retries without success, raise the last error
         raise RuntimeError(f"Failed after {max_retries} attempts. Last error: {last_error}")
-    
-    # Ensure schedule is complete
+
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
@@ -361,7 +570,7 @@ Date: {report_date}
     data["date"] = data.get("date", report_date)
     return data
 
-# ============= EXCEL GENERATION (unchanged) =============
+# ============= EXCEL GENERATION =============
 def create_excel(schedule_data, template_bytes=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -443,7 +652,7 @@ def create_excel(schedule_data, template_bytes=None):
     output.seek(0)
     return output
 
-# ============= PDF GENERATION (unchanged) =============
+# ============= PDF GENERATION =============
 def create_pdf(schedule_data, template_bytes=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -558,7 +767,7 @@ def create_fallback_pdf(schedule_data):
     buffer.close()
     return BytesIO(pdf_data)
 
-# ============= DISPLAY REPORT (unchanged) =============
+# ============= DISPLAY REPORT =============
 def display_report(data, template_bytes, emp_name):
     st.markdown("### 📄 Report Preview")
     table_rows_html = "".join([
@@ -632,7 +841,7 @@ def confetti():
     </script>
     """, height=0)
 
-# ============= STREAMLIT UI (unchanged) =============
+# ============= STREAMLIT UI =============
 st.markdown("""
 <div class="main-header">
     <h1>📋 EOD Report Generator</h1>
@@ -648,7 +857,8 @@ saved_api_key = config.get("api_key", "")
 # ---- Sidebar ----
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/google-forms.png", width=25)
-    if st.button(f"🌓 Switch to {'Light' if theme == 'dark' else 'Dark'} Theme", use_container_width=True):
+    # Fixed button – uses session state directly to avoid NameError
+    if st.button(f"🌓 Switch to {'Light' if st.session_state.theme == 'dark' else 'Dark'} Theme", use_container_width=True):
         toggle_theme()
         st.rerun()
 
