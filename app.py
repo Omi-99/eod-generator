@@ -3,7 +3,6 @@ import json
 import re
 import os
 import time
-import shutil
 from datetime import datetime
 import openai
 from groq import Groq
@@ -101,7 +100,6 @@ def create_short_to_full_map(lunch_hour):
     return dict(zip(short, full))
 
 def get_full_to_short_map(lunch_hour):
-    """Reverse mapping: full slot label -> short slot label."""
     short_to_full = create_short_to_full_map(lunch_hour)
     return {v: k for k, v in short_to_full.items()}
 
@@ -157,11 +155,11 @@ table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
 table_text = "#ffffff" if theme == "dark" else "#000000"
 table_border = "#555" if theme == "dark" else "#ddd"
 
-# Mobile-responsive CSS
+# ================= ENHANCED MOBILE-RESPONSIVE CSS =================
 st.markdown(f"""
 <style>
     .block-container {{
-        padding: 0.6rem 0.8rem 0.3rem 0.8rem !important;
+        padding: 0.4rem 0.5rem 0.2rem 0.5rem !important;
         max-width: 100% !important;
     }}
     .stApp {{
@@ -173,12 +171,12 @@ st.markdown(f"""
         background: {header_grad};
         background-size: 200% 200%;
         animation: gradientMove 6s ease infinite;
-        padding: 0.5rem 0.6rem;
+        padding: 0.4rem 0.5rem;
         border-radius: 12px;
         color: white;
         text-align: center;
-        margin-bottom: 0.4rem;
-        margin-top: 0.4rem;
+        margin-bottom: 0.3rem;
+        margin-top: 0.3rem;
         box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
     }}
     @keyframes gradientMove {{
@@ -187,14 +185,14 @@ st.markdown(f"""
         100% {{ background-position: 0% 50%; }}
     }}
     .main-header h1 {{
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         font-weight: 700;
         margin: 0;
         line-height: 1.3;
         text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }}
     .main-header p {{
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         opacity: 0.9;
         margin: 0;
         line-height: 1.3;
@@ -203,95 +201,43 @@ st.markdown(f"""
         background: {card_bg};
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border-radius: 12px;
-        padding: 0.4rem 0.6rem;
-        margin-bottom: 0.4rem;
+        border-radius: 10px;
+        padding: 0.3rem 0.5rem;
+        margin-bottom: 0.3rem;
         box-shadow: 0 4px 20px {shadow_color};
         border: 1px solid {border_color};
         transition: all 0.3s ease;
-        animation: fadeInUp 0.6s ease;
-    }}
-    .glass-card:hover {{
-        transform: translateY(-3px);
-        box-shadow: 0 8px 30px {shadow_color};
-    }}
-    @keyframes fadeInUp {{
-        0% {{ opacity: 0; transform: translateY(20px); }}
-        100% {{ opacity: 1; transform: translateY(0); }}
     }}
     .slot-card {{
         background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
-        border-radius: 10px;
-        padding: 0.3rem 0.6rem;
-        margin-bottom: 0.3rem;
+        border-radius: 8px;
+        padding: 0.2rem 0.4rem;
+        margin-bottom: 0.2rem;
         border: 1px solid {border_color};
-        box-shadow: 0 4px 12px {shadow_color};
+        box-shadow: 0 2px 8px {shadow_color};
         transition: all 0.3s ease;
         color: {text_color};
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-    }}
-    .slot-card:hover {{
-        transform: scale(1.01);
-        box-shadow: 0 6px 20px rgba(102,126,234,0.3);
+        gap: 4px;
     }}
     .slot-label {{
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         color: {text_color};
-        min-width: 90px;
-        margin-right: 8px;
+        min-width: 65px;
+        margin-right: 4px;
     }}
     .lunch-card {{
         background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(255,152,0,0.2));
         border: 1px solid rgba(255,193,7,0.3);
         color: {text_color};
     }}
-    .preview-card {{
-        border: 1px solid {preview_border};
-        border-radius: 10px;
-        padding: 8px 12px;
-        background: {preview_bg};
-        box-shadow: 0 4px 15px {shadow_color};
-        margin-bottom: 6px;
-        backdrop-filter: blur(8px);
-        transition: all 0.4s ease;
-        animation: slideUp 0.8s ease;
-        color: {text_color};
-    }}
-    @keyframes slideUp {{
-        0% {{ opacity: 0; transform: translateY(40px); }}
-        100% {{ opacity: 1; transform: translateY(0); }}
-    }}
-    .preview-title {{ font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }}
-    .preview-detail {{ display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid {preview_border}; font-size: 13px; }}
-    .preview-detail-label {{ font-weight: bold; width: 100px; }}
-    .preview-table {{
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 6px;
-        font-size: 12px;
-        color: {table_text};
-    }}
-    .preview-table th {{
-        background-color: {table_header_bg};
-        font-weight: bold;
-        border: 1px solid {table_border};
-        padding: 3px 6px;
-        text-align: left;
-        color: {text_color};
-    }}
-    .preview-table td {{
-        border: 1px solid {table_border};
-        padding: 3px 6px;
-        text-align: left;
-    }}
-    .stTextInput, .stDateInput, .stSelectbox, .stTextArea {{ margin-bottom: 0.1rem !important; }}
     .stButton button {{
-        padding: 0.3rem 0.8rem !important;
+        padding: 0.4rem 0.6rem !important;
         font-size: 0.85rem !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
@@ -300,15 +246,12 @@ st.markdown(f"""
         border: none !important;
         font-weight: 600 !important;
         box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4) !important;
-        min-height: 44px !important;
+        min-height: 48px !important;
         width: 100% !important;
-    }}
-    .stButton button:hover {{
-        transform: scale(1.03);
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6) !important;
+        touch-action: manipulation !important;
     }}
     .stDownloadButton button {{
-        padding: 0.3rem 0.8rem !important;
+        padding: 0.4rem 0.6rem !important;
         font-size: 0.85rem !important;
         border-radius: 8px !important;
         transition: all 0.3s ease !important;
@@ -317,19 +260,13 @@ st.markdown(f"""
         border: none !important;
         font-weight: 600 !important;
         box-shadow: 0 2px 10px rgba(40, 167, 69, 0.4) !important;
-        min-height: 44px !important;
+        min-height: 48px !important;
         width: 100% !important;
-    }}
-    .stDownloadButton button:hover {{
-        transform: scale(1.03);
-        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.6) !important;
+        touch-action: manipulation !important;
     }}
     .stDownloadButton button:nth-of-type(2) {{
         background: #dc3545 !important;
         box-shadow: 0 2px 10px rgba(220, 53, 69, 0.4) !important;
-    }}
-    .stDownloadButton button:nth-of-type(2):hover {{
-        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6) !important;
     }}
     .css-1d391kg {{
         background: {bg_secondary} !important;
@@ -345,70 +282,92 @@ st.markdown(f"""
         font-size: 0.8rem !important;
         color: {text_color} !important;
     }}
-    .css-1d391kg .stSelectbox select,
-    .css-1d391kg .stTextInput input,
-    .css-1d391kg .stDateInput input {{
+    .stTextInput input, .stDateInput input, .stSelectbox select {{
         background: rgba(60, 60, 90, 0.5) !important;
         color: {text_color} !important;
         border: 1px solid {border_color} !important;
         border-radius: 6px !important;
-        font-size: 0.8rem !important;
-        padding: 0.2rem 0.4rem !important;
-        height: 2.2rem !important;
+        font-size: 0.85rem !important;
+        padding: 0.4rem 0.5rem !important;
+        height: 44px !important;
         backdrop-filter: blur(4px) !important;
+        width: 100% !important;
     }}
-    .css-1d391kg .stButton button {{
-        background: rgba(120, 120, 200, 0.7) !important;
-        color: {text_color} !important;
-        font-size: 0.75rem !important;
-        padding: 0.2rem 0.6rem !important;
-        height: 2rem !important;
-        border: 1px solid {border_color} !important;
-        border-radius: 6px !important;
-        backdrop-filter: blur(4px) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
-        min-height: 38px !important;
+    .preview-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 4px;
+        font-size: 11px;
+        color: {table_text};
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
     }}
-    .css-1d391kg .stButton button:hover {{
-        background: rgba(150, 150, 220, 0.9) !important;
-        transform: scale(1.02);
+    .preview-table th, .preview-table td {{
+        border: 1px solid {table_border};
+        padding: 4px 6px;
+        text-align: left;
+        font-size: 11px;
     }}
-    .css-1d391kg .stExpander {{
-        border: 1px solid {border_color} !important;
-        background: rgba(40, 40, 60, 0.4) !important;
-        border-radius: 8px !important;
-        padding: 0.1rem 0.2rem !important;
-        backdrop-filter: blur(8px) !important;
-        margin-bottom: 0.2rem !important;
-    }}
-    .css-1d391kg .stExpander .stExpanderHeader {{
-        color: {text_color} !important;
-        background: rgba(40, 40, 60, 0.2) !important;
-        font-size: 0.8rem !important;
-        padding: 0.2rem 0.4rem !important;
-        border-radius: 6px !important;
-    }}
-    .css-1d391kg hr {{
-        border-color: {border_color} !important;
-        margin: 0.15rem 0 !important;
-    }}
-    .css-1d391kg .stImage {{
-        margin-bottom: 0.1rem !important;
-        filter: drop-shadow(0 0 8px rgba(102, 126, 234, 0.3)) !important;
+    .preview-table th {{
+        background-color: {table_header_bg};
+        font-weight: bold;
+        color: {text_color};
     }}
     @media (max-width: 768px) {{
-        .main-header h1 {{ font-size: 1.2rem !important; }}
-        .main-header p {{ font-size: 0.7rem !important; }}
-        .stButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
-        .stDownloadButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
-        .preview-table {{ font-size: 10px !important; }}
-        .preview-table th, .preview-table td {{ padding: 2px 4px !important; }}
-        .css-1d391kg {{ padding: 0.1rem 0.2rem !important; }}
-        .css-1d391kg * {{ font-size: 0.7rem !important; }}
-        .css-1d391kg .stButton button {{ font-size: 0.7rem !important; padding: 0.1rem 0.3rem !important; min-height: 34px !important; }}
-        .slot-label {{ font-size: 0.75rem; min-width: 70px; }}
-        .slot-card {{ padding: 0.2rem 0.4rem; }}
-        .stTextInput input {{ font-size: 0.8rem !important; }}
+        .block-container {{
+            padding: 0.3rem 0.3rem 0.2rem 0.3rem !important;
+        }}
+        .main-header h1 {{ font-size: 1.1rem !important; }}
+        .main-header p {{ font-size: 0.65rem !important; }}
+        .stButton button {{
+            font-size: 0.9rem !important;
+            padding: 0.5rem 0.4rem !important;
+            min-height: 52px !important;
+        }}
+        .stDownloadButton button {{
+            font-size: 0.9rem !important;
+            padding: 0.5rem 0.4rem !important;
+            min-height: 52px !important;
+        }}
+        .slot-label {{
+            font-size: 0.7rem !important;
+            min-width: 60px !important;
+        }}
+        .slot-card {{
+            padding: 0.2rem 0.3rem !important;
+            margin-bottom: 0.15rem !important;
+        }}
+        .stTextInput input, .stDateInput input, .stSelectbox select {{
+            font-size: 16px !important;
+            height: 48px !important;
+            padding: 0.3rem 0.4rem !important;
+        }}
+        .css-1d391kg {{
+            padding: 0.1rem 0.2rem !important;
+            min-width: 260px !important;
+        }}
+        .css-1d391kg * {{
+            font-size: 0.7rem !important;
+        }}
+        .stColumns {{
+            flex-direction: column !important;
+        }}
+    }}
+    @media (max-width: 480px) {{
+        .main-header h1 {{ font-size: 1rem !important; }}
+        .main-header p {{ font-size: 0.6rem !important; }}
+        .preview-table {{
+            font-size: 10px !important;
+        }}
+        .preview-table th, .preview-table td {{
+            padding: 3px 4px !important;
+            font-size: 10px !important;
+        }}
+        .slot-label {{
+            font-size: 0.65rem !important;
+            min-width: 55px !important;
+        }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -570,33 +529,34 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION (FIXED WITH FALLBACK) =============
+# ============= AI GENERATION (NO FALLBACK) =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
+    # Validate API key if required
     if PROVIDERS[provider]["api_key_required"] and not api_key:
-        raise ValueError(f"⚠️ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
+        raise ValueError(f"❌ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
 
     slot_labels = get_time_slots(lunch_hour)
     lunch_label = slot_labels[lunch_hour - 10]
     short_to_full = create_short_to_full_map(lunch_hour)
     full_to_short = get_full_to_short_map(lunch_hour)
 
-    # --- Parse user tasks into a structured mapping (short slot -> task) ---
+    # --- Parse user tasks ---
     task_mapping = {}
-    for line in user_tasks.split('\n'):
-        line = line.strip()
-        if not line:
-            continue
-        match = re.match(r'^(\d{2}:\d{2}-\d{2}:\d{2})\s*:\s*(.*)$', line)
-        if match:
-            short_time, task = match.groups()
-            task = task.strip()
-            task_mapping[short_time] = task
+    force_dash_slots = set()
+    if user_tasks:
+        for line in user_tasks.split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            match = re.match(r'^(\d{2}:\d{2}-\d{2}:\d{2})\s*:\s*(.*)$', line)
+            if match:
+                short_time, task = match.groups()
+                task = task.strip()
+                task_mapping[short_time] = task
+                if task == "-":
+                    force_dash_slots.add(short_time)
 
-    # We'll try AI, but if anything fails, we fall back to a schedule built from task_mapping.
-    data = None
-    ai_success = False
-
-    # Build the AI prompt
+    # --- Build AI prompt ---
     structured_tasks_json = json.dumps(task_mapping, indent=2)
     prompt = f"""
 You are an assistant that fills an End‑of‑Day work report.
@@ -605,22 +565,21 @@ The report has exactly these 8 hourly slots (lunch break is fixed at **{lunch_la
 
 All slots must be filled. Do not leave any slot empty.
 
-The user has provided the following tasks for specific time slots (JSON mapping of short slot → task):
+The user has provided these tasks (short slot → task):
 {structured_tasks_json}
 
 Instructions:
-- For each slot, use the provided task if it exists in the mapping.
+- For each slot, use the provided task if it exists.
 - If the task is "-", set both activity and description to "-".
-- If a slot is not present in the mapping, distribute remaining tasks intelligently or fill with appropriate activities.
+- If a slot is not in the mapping, fill with a reasonable activity.
+- For each task, write a professional description (1-2 sentences).
 - For the lunch slot, always use activity="Lunch Break" and description="Lunch Break".
 
 Return **only** a valid JSON object with:
 - "employee_name"
 - "position"
 - "date"
-- "schedule": an array of objects with keys "slot", "activity", "description". Include exactly the above 8 slots (lunch must be fixed).
-
-Use double quotes for all keys and string values. No trailing commas. Do not include any text outside the JSON.
+- "schedule": array of objects with keys "slot", "activity", "description"
 
 Employee: {employee_name}
 Position: {position}
@@ -630,7 +589,6 @@ Date: {report_date}
     max_retries = 2
     last_error = None
 
-    # ---- AI call ----
     for attempt in range(max_retries):
         if progress_callback:
             progress_callback(30 + attempt * 20, f"Contacting AI ({provider})...")
@@ -684,111 +642,73 @@ Date: {report_date}
             else:
                 raise ValueError("Unsupported provider")
 
-            # Try to parse JSON
+            # --- Parse JSON ---
             try:
                 data = extract_and_clean_json(raw)
-                ai_success = True
-                break
             except Exception as parse_error:
-                last_error = f"JSON parsing error: {parse_error}"
-                if attempt == max_retries - 1:
-                    # Fall back to user-defined schedule
-                    raise RuntimeError(f"Could not parse AI response: {raw[:300]}...\nError: {parse_error}")
+                # Provide detailed error with raw response snippet
+                raise RuntimeError(f"Failed to parse AI response as JSON. Raw response (first 500 chars):\n{raw[:500]}\n\nError: {parse_error}")
+
+            # --- Validate and build final schedule ---
+            if "schedule" not in data or not isinstance(data["schedule"], list):
+                raise ValueError("AI response missing 'schedule' array.")
+
+            schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
+            complete_schedule = []
+
+            for slot_label in slot_labels:
+                if slot_label == lunch_label:
+                    complete_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
                 else:
-                    time.sleep(1)
-                    continue
+                    short_key = full_to_short.get(slot_label, "")
+                    user_task = task_mapping.get(short_key, "")
+
+                    if user_task:
+                        # User provided a task – use it
+                        if user_task == "-":
+                            complete_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
+                        else:
+                            # Use AI description if available
+                            if slot_label in schedule_dict:
+                                ai_desc = schedule_dict[slot_label].get("description", "")
+                            else:
+                                ai_desc = ""
+                            if not ai_desc or ai_desc == "No description provided.":
+                                ai_desc = f"Task: {user_task}"
+                            complete_schedule.append({
+                                "slot": slot_label,
+                                "activity": user_task,
+                                "description": ai_desc
+                            })
+                    elif slot_label in schedule_dict:
+                        # AI generated this slot
+                        entry = schedule_dict[slot_label]
+                        complete_schedule.append({
+                            "slot": slot_label,
+                            "activity": entry.get("activity", "No specific task"),
+                            "description": entry.get("description", "No description provided.")
+                        })
+                    else:
+                        # Should not happen because AI should fill all slots
+                        raise ValueError(f"AI response missing slot: {slot_label}")
+
+            data["schedule"] = complete_schedule
+            data["employee_name"] = data.get("employee_name", employee_name)
+            data["position"] = data.get("position", position)
+            data["date"] = data.get("date", report_date)
+            return data
+
         except Exception as e:
             last_error = str(e)
             if attempt == max_retries - 1:
-                # Fall back to user-defined schedule
-                raise RuntimeError(f"AI request failed: {e}")
+                # Re-raise the error to be caught in the UI
+                raise RuntimeError(f"AI generation failed after {max_retries} attempts.\nLast error: {last_error}")
             else:
                 time.sleep(2)
                 continue
 
-    # If we didn't get data from AI, we must fallback. But if we got data, we override with user tasks.
-    if data is None:
-        # Fallback: build schedule from task_mapping
-        if progress_callback:
-            progress_callback(90, "⚠️ AI failed – using your exact input")
-        st.warning("⚠️ AI generation failed. Using your exact input as schedule.")
-        complete_schedule = []
-        for slot_label in slot_labels:
-            if slot_label == lunch_label:
-                complete_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
-            else:
-                short_key = full_to_short.get(slot_label, "")
-                user_task = task_mapping.get(short_key, "")
-                if user_task:
-                    if user_task == "-":
-                        complete_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
-                    else:
-                        complete_schedule.append({"slot": slot_label, "activity": user_task, "description": f"Task: {user_task}"})
-                else:
-                    complete_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
-        data = {
-            "employee_name": employee_name,
-            "position": position,
-            "date": report_date,
-            "schedule": complete_schedule
-        }
-        return data
-
-    # ---- Post-process: ensure all slots exist and override with user tasks ----
-    if "schedule" not in data or not isinstance(data["schedule"], list):
-        data["schedule"] = []
-    schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
-    complete_schedule = []
-
-    for slot_label in slot_labels:
-        if slot_label == lunch_label:
-            complete_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
-            continue
-
-        short_key = full_to_short.get(slot_label, "")
-        user_task = task_mapping.get(short_key, "")
-
-        if user_task:
-            if user_task == "-":
-                complete_schedule.append({
-                    "slot": slot_label,
-                    "activity": "-",
-                    "description": "-"
-                })
-            else:
-                # Use user's task as activity; keep AI description if available, else generic
-                if slot_label in schedule_dict:
-                    ai_desc = schedule_dict[slot_label].get("description", "")
-                else:
-                    ai_desc = ""
-                if not ai_desc or ai_desc == "No description provided.":
-                    ai_desc = f"Task: {user_task}"
-                complete_schedule.append({
-                    "slot": slot_label,
-                    "activity": user_task,
-                    "description": ai_desc
-                })
-        else:
-            # User didn't specify – use AI-generated content (or fallback)
-            if slot_label in schedule_dict:
-                entry = schedule_dict[slot_label]
-                complete_schedule.append({
-                    "slot": slot_label,
-                    "activity": entry.get("activity", "No specific task"),
-                    "description": entry.get("description", "No description provided.")
-                })
-            else:
-                complete_schedule.append({
-                    "slot": slot_label,
-                    "activity": "No specific task",
-                    "description": "No description provided."
-                })
-
-    data["schedule"] = complete_schedule
-    data["employee_name"] = data.get("employee_name", employee_name)
-    data["position"] = data.get("position", position)
-    data["date"] = data.get("date", report_date)
-    return data
+    # Should never reach here
+    raise RuntimeError("Unexpected error in AI generation.")
 
 # ============= EXCEL GENERATION =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
@@ -910,7 +830,7 @@ def create_pdf_from_schedule(schedule_data, template_bytes=None, time_slots=None
             os.unlink(xlsx_path)
         if os.path.exists(pdf_path):
             os.unlink(pdf_path)
-        st.warning("LibreOffice not available. Using fallback PDF (formatting may differ).")
+        st.warning("LibreOffice not available. Using fallback PDF.")
         return create_fallback_pdf(schedule_data, time_slots)
 
 def create_fallback_pdf(schedule_data, time_slots=None):
@@ -1246,14 +1166,13 @@ with left_col:
     time_slots_short = get_time_slots_short(lunch_hour)
     lunch_index = lunch_hour - 10
 
-    # Store user inputs in session state (individual slot tasks)
+    # Store user inputs in session state
     if "slot_tasks" not in st.session_state:
         st.session_state.slot_tasks = {slot: "" for slot in time_slots_full if slot != time_slots_full[lunch_index]}
 
-    # Display each slot as a glossy card with a text input
+    # Display each slot
     for i, full_slot in enumerate(time_slots_full):
         if i == lunch_index:
-            # Lunch slot – display as disabled card
             st.markdown(f"""
             <div class="slot-card lunch-card" style="display: flex; align-items: center; padding: 0.3rem 0.6rem;">
                 <span class="slot-label">🍴 {full_slot}</span>
@@ -1264,7 +1183,7 @@ with left_col:
 
         short_time = time_slots_short[i]
         current_val = st.session_state.slot_tasks.get(full_slot, "")
-        col_label, col_input = st.columns([0.4, 0.6])
+        col_label, col_input = st.columns([0.35, 0.65])
         with col_label:
             st.markdown(f"<span class='slot-label'>{short_time}</span>", unsafe_allow_html=True)
         with col_input:
@@ -1277,7 +1196,7 @@ with left_col:
             )
             st.session_state.slot_tasks[full_slot] = new_val
 
-    # Build the full task summary string for the AI (combine all slot tasks)
+    # Build task summary
     task_lines = []
     for full_slot in time_slots_full:
         if full_slot == time_slots_full[lunch_index]:
@@ -1291,7 +1210,7 @@ with left_col:
     task_summary = "\n".join(task_lines)
     st.session_state.task_summary = task_summary
 
-    # Quick templates (fill slots)
+    # Quick templates
     templates_quick = {
         "Feng Shui & Content": {
             "10:00-11:00": "Posted Feng Shui stories",
@@ -1340,16 +1259,15 @@ with left_col:
                                        disabled=st.session_state.last_schedule is None)
 
 with right_col:
-    # Editable schedule using text_inputs
     if st.session_state.current_schedule is not None:
         st.markdown("### 📊 Edit Schedule")
-        st.caption("You can edit Activity and Description directly below.")
+        st.caption("Edit Activity and Description directly below.")
 
         schedule_list = st.session_state.current_schedule
         edited_schedule = []
 
         for idx, entry in enumerate(schedule_list):
-            cols = st.columns([2, 2, 3])  # Time Slot, Activity, Description
+            cols = st.columns([2, 2, 3])
             with cols[0]:
                 st.markdown(f"**{entry['slot']}**")
             with cols[1]:
@@ -1372,10 +1290,8 @@ with right_col:
                 "description": new_description
             })
 
-        # Update session state with edits
         st.session_state.current_schedule = edited_schedule
 
-        # Build schedule data for download
         schedule_data = {
             "employee_name": st.session_state.selected_employee_name,
             "position": st.session_state.selected_employee_position,
@@ -1384,7 +1300,6 @@ with right_col:
         }
         st.session_state.last_schedule = schedule_data
 
-        # Download buttons
         time_slots = get_time_slots(lunch_hour)
         excel_data = create_excel_from_schedule(schedule_data, template_bytes, time_slots)
         pdf_data = create_pdf_from_schedule(schedule_data, template_bytes, time_slots)
@@ -1431,17 +1346,17 @@ if generate_clicked or regenerate_clicked:
         if not tasks:
             st.warning("Please describe your daily tasks (at least one slot).")
             st.stop()
+        
+        # Get API key
         if PROVIDERS[provider]["api_key_required"]:
             saved_key = load_config().get("api_key", "")
             if saved_key:
                 api_key = saved_key
             else:
                 api_key = ""
-            if not api_key:
-                st.warning("⚠️ API key is missing. Please enter it in the sidebar under Config → API Key.")
-                st.stop()
         else:
             api_key = None
+            
         emp_used = st.session_state.selected_employee_name
         pos_used = st.session_state.selected_employee_position
         date_used = report_date.strftime("%Y-%m-%d")
@@ -1462,6 +1377,7 @@ if generate_clicked or regenerate_clicked:
 
     progress_bar = st.progress(0)
     status_text = st.empty()
+    
     def update_progress(progress, message):
         progress_bar.progress(progress)
         status_text.markdown(f"<span style='color:#667eea; font-weight:500;'>{message}</span>", unsafe_allow_html=True)
@@ -1477,7 +1393,6 @@ if generate_clicked or regenerate_clicked:
         if not any(e["name"] == emp_used for e in emp_list):
             add_employee(emp_used, pos_used)
 
-        # Store the schedule in session state for editing
         st.session_state.current_schedule = data["schedule"]
 
         st.balloons()
