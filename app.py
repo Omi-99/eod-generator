@@ -97,13 +97,245 @@ def get_time_slots_short(lunch_hour):
     return slots
 
 def create_short_to_full_map(lunch_hour):
-    """Returns a dict mapping short time (e.g., '10:00-11:00') to full label."""
     short = get_time_slots_short(lunch_hour)
     full = get_time_slots(lunch_hour)
     return dict(zip(short, full))
 
-# ================= DYNAMIC CSS (unchanged) =================
-# (The CSS code is the same as before – I'll omit it here for brevity but it's included in the final code below)
+# ================= DYNAMIC CSS =================
+theme = st.session_state.theme
+bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
+bg_secondary = "rgba(20,20,40,0.85)" if theme == "dark" else "rgba(255,255,255,0.85)"
+text_color = "#ffffff" if theme == "dark" else "#000000"
+card_bg = "rgba(30,30,50,0.6)" if theme == "dark" else "rgba(255,255,255,0.7)"
+border_color = "rgba(255,255,255,0.15)" if theme == "dark" else "rgba(0,0,0,0.1)"
+shadow_color = "rgba(0,0,0,0.3)" if theme == "dark" else "rgba(0,0,0,0.1)"
+header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+preview_bg = "rgba(255,255,255,0.08)" if theme == "dark" else "white"
+preview_border = "#444" if theme == "dark" else "#ddd"
+table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
+table_text = "#ffffff" if theme == "dark" else "#000000"
+table_border = "#555" if theme == "dark" else "#ddd"
+
+st.markdown(f"""
+<style>
+    .stApp {{
+        background: {bg_primary};
+        color: {text_color};
+        transition: background 0.3s ease, color 0.3s ease;
+    }}
+    .block-container {{
+        padding: 0.6rem 0.8rem 0.3rem 0.8rem !important;
+        max-width: 100% !important;
+    }}
+    .main-header {{
+        background: {header_grad};
+        background-size: 200% 200%;
+        animation: gradientMove 6s ease infinite;
+        padding: 0.5rem 0.6rem;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        margin-bottom: 0.4rem;
+        margin-top: 0.4rem;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    }}
+    @keyframes gradientMove {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
+    .main-header h1 {{
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.3;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }}
+    .main-header p {{
+        font-size: 0.75rem;
+        opacity: 0.9;
+        margin: 0;
+        line-height: 1.3;
+    }}
+    .glass-card {{
+        background: {card_bg};
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 12px;
+        padding: 0.4rem 0.6rem;
+        margin-bottom: 0.4rem;
+        box-shadow: 0 4px 20px {shadow_color};
+        border: 1px solid {border_color};
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.6s ease;
+    }}
+    .glass-card:hover {{
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px {shadow_color};
+    }}
+    @keyframes fadeInUp {{
+        0% {{ opacity: 0; transform: translateY(20px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .preview-card {{
+        border: 1px solid {preview_border};
+        border-radius: 10px;
+        padding: 8px 12px;
+        background: {preview_bg};
+        box-shadow: 0 4px 15px {shadow_color};
+        margin-bottom: 6px;
+        backdrop-filter: blur(8px);
+        transition: all 0.4s ease;
+        animation: slideUp 0.8s ease;
+        color: {text_color};
+    }}
+    @keyframes slideUp {{
+        0% {{ opacity: 0; transform: translateY(40px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .preview-title {{ font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }}
+    .preview-detail {{ display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid {preview_border}; font-size: 13px; }}
+    .preview-detail-label {{ font-weight: bold; width: 100px; }}
+    .preview-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+        font-size: 12px;
+        color: {table_text};
+    }}
+    .preview-table th {{
+        background-color: {table_header_bg};
+        font-weight: bold;
+        border: 1px solid {table_border};
+        padding: 3px 6px;
+        text-align: left;
+        color: {text_color};
+    }}
+    .preview-table td {{
+        border: 1px solid {table_border};
+        padding: 3px 6px;
+        text-align: left;
+    }}
+    .stTextInput, .stDateInput, .stSelectbox, .stTextArea {{ margin-bottom: 0.1rem !important; }}
+    .stButton button {{
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background: {header_grad} !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4) !important;
+        min-height: 44px !important;
+        width: 100% !important;
+    }}
+    .stButton button:hover {{
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6) !important;
+    }}
+    .stDownloadButton button {{
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background: #28a745 !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(40, 167, 69, 0.4) !important;
+        min-height: 44px !important;
+        width: 100% !important;
+    }}
+    .stDownloadButton button:hover {{
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.6) !important;
+    }}
+    .stDownloadButton button:nth-of-type(2) {{
+        background: #dc3545 !important;
+        box-shadow: 0 2px 10px rgba(220, 53, 69, 0.4) !important;
+    }}
+    .stDownloadButton button:nth-of-type(2):hover {{
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6) !important;
+    }}
+    .css-1d391kg {{
+        background: {bg_secondary} !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: {text_color} !important;
+        padding: 0.2rem 0.3rem !important;
+        border-right: 1px solid {border_color} !important;
+        box-shadow: 4px 0 30px {shadow_color} !important;
+        transition: all 0.3s ease;
+    }}
+    .css-1d391kg * {{
+        font-size: 0.8rem !important;
+        color: {text_color} !important;
+    }}
+    .css-1d391kg .stSelectbox select,
+    .css-1d391kg .stTextInput input,
+    .css-1d391kg .stDateInput input {{
+        background: rgba(60, 60, 90, 0.5) !important;
+        color: {text_color} !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 6px !important;
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.4rem !important;
+        height: 2.2rem !important;
+        backdrop-filter: blur(4px) !important;
+    }}
+    .css-1d391kg .stButton button {{
+        background: rgba(120, 120, 200, 0.7) !important;
+        color: {text_color} !important;
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.6rem !important;
+        height: 2rem !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 6px !important;
+        backdrop-filter: blur(4px) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+        min-height: 38px !important;
+    }}
+    .css-1d391kg .stButton button:hover {{
+        background: rgba(150, 150, 220, 0.9) !important;
+        transform: scale(1.02);
+    }}
+    .css-1d391kg .stExpander {{
+        border: 1px solid {border_color} !important;
+        background: rgba(40, 40, 60, 0.4) !important;
+        border-radius: 8px !important;
+        padding: 0.1rem 0.2rem !important;
+        backdrop-filter: blur(8px) !important;
+        margin-bottom: 0.2rem !important;
+    }}
+    .css-1d391kg .stExpander .stExpanderHeader {{
+        color: {text_color} !important;
+        background: rgba(40, 40, 60, 0.2) !important;
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 6px !important;
+    }}
+    .css-1d391kg hr {{
+        border-color: {border_color} !important;
+        margin: 0.15rem 0 !important;
+    }}
+    .css-1d391kg .stImage {{
+        margin-bottom: 0.1rem !important;
+        filter: drop-shadow(0 0 8px rgba(102, 126, 234, 0.3)) !important;
+    }}
+    @media (max-width: 768px) {{
+        .main-header h1 {{ font-size: 1.2rem !important; }}
+        .main-header p {{ font-size: 0.7rem !important; }}
+        .stButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
+        .stDownloadButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
+        .preview-table {{ font-size: 10px !important; }}
+        .preview-table th, .preview-table td {{ padding: 2px 4px !important; }}
+        .css-1d391kg {{ padding: 0.1rem 0.2rem !important; }}
+        .css-1d391kg * {{ font-size: 0.7rem !important; }}
+        .css-1d391kg .stButton button {{ font-size: 0.7rem !important; padding: 0.1rem 0.3rem !important; min-height: 34px !important; }}
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 CONFIG_FILE = ".eod_config.json"
@@ -271,7 +503,6 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
     short_to_full = create_short_to_full_map(lunch_hour)
 
     # Parse user's input to detect '-' lines
-    # We'll store which short slots have '-' so we can enforce them later
     force_dash_slots = set()
     if user_tasks:
         for line in user_tasks.split('\n'):
@@ -389,7 +620,7 @@ Date: {report_date}
     else:
         raise RuntimeError(f"Failed after {max_retries} attempts. Last error: {last_error}")
 
-    # Ensure schedule is complete
+    # Ensure schedule is complete and enforce '-' for marked slots
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
@@ -399,7 +630,6 @@ Date: {report_date}
             complete_schedule.append({"slot": slot, "activity": "Lunch Break", "description": "Lunch Break"})
         elif slot in schedule_dict:
             entry = schedule_dict[slot]
-            # If this slot is in force_dash_slots, override with "-"
             if slot in force_dash_slots:
                 entry["activity"] = "-"
                 entry["description"] = "-"
@@ -416,19 +646,632 @@ Date: {report_date}
     return data
 
 # ============= EXCEL GENERATION =============
-# (Same as before, omitted for brevity – included in full code below)
+def create_excel(schedule_data, template_bytes=None, time_slots=None):
+    if template_bytes is None:
+        template_bytes = DEFAULT_TEMPLATE_BYTES
+    if time_slots is None:
+        time_slots = get_time_slots(13)
+
+    try:
+        if template_bytes:
+            wb = load_workbook(BytesIO(template_bytes))
+            ws = wb.active
+        else:
+            from openpyxl import Workbook
+            wb = Workbook()
+            ws = wb.active
+            ws['B1'] = "EOD REPORT"
+            ws.merge_cells('B1:C1')
+            ws['B1'].font = Font(name='Calibri', size=16, bold=True)
+            ws['B1'].alignment = Alignment(horizontal='center', vertical='center')
+            ws['B3'] = "Name Of Employee"
+            ws['C3'] = schedule_data.get("employee_name", DEFAULT_EMPLOYEE)
+            ws['B4'] = "Position"
+            ws['C4'] = schedule_data.get("position", DEFAULT_POSITION)
+            ws['B5'] = "Date"
+            ws['C5'] = schedule_data.get("date", datetime.now().strftime("%Y-%m-%d"))
+            for r in [3,4,5]:
+                ws[f'B{r}'].font = Font(bold=True)
+            ws['B7'] = "Time"
+            ws['C7'] = "Activity"
+            ws['D7'] = "Description"
+            for col in ['B','C','D']:
+                ws[f'{col}7'].font = Font(bold=True)
+            for i, slot in enumerate(time_slots):
+                ws[f'B{8+i}'] = slot
+            ws.column_dimensions['B'].width = 18
+            ws.column_dimensions['C'].width = 28
+            ws.column_dimensions['D'].width = 35
+            ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+            ws.page_setup.fitToWidth = 1
+            ws.page_setup.fitToHeight = False
+            thin = Border(left=Side(style='thin'), right=Side(style='thin'),
+                          top=Side(style='thin'), bottom=Side(style='thin'))
+            for row in ws.iter_rows(min_row=7, max_row=7+len(time_slots), min_col=2, max_col=4):
+                for cell in row:
+                    cell.border = thin
+            for cell_addr in ['C3','C4','C5']:
+                ws[cell_addr].border = thin
+    except Exception as e:
+        st.error(f"Error creating workbook: {e}")
+        raise
+
+    def safe_write(cell_address, value):
+        try:
+            cell = ws[cell_address]
+            for merged_range in ws.merged_cells:
+                if cell.coordinate in merged_range:
+                    top_left = merged_range.start_cell
+                    top_left.value = value
+                    return
+            cell.value = value
+        except:
+            try:
+                ws[cell_address] = value
+            except:
+                pass
+
+    safe_write('C3', schedule_data.get("employee_name", DEFAULT_EMPLOYEE))
+    safe_write('C4', schedule_data.get("position", DEFAULT_POSITION))
+    safe_write('C5', schedule_data.get("date", datetime.now().strftime("%Y-%m-%d")))
+
+    start_row = 8
+    for idx, slot in enumerate(time_slots):
+        row = start_row + idx
+        entry = next((item for item in schedule_data.get("schedule", []) if item.get("slot", "").strip().lower() == slot.lower()), None)
+        activity = entry.get("activity", "No specific task") if entry else "No specific task"
+        description = entry.get("description", "No description provided.") if entry else "No description provided."
+        safe_write(f'C{row}', activity)
+        safe_write(f'D{row}', description)
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
 
 # ============= PDF GENERATION =============
-# (Same as before, included in full code below)
+def create_pdf(schedule_data, template_bytes=None, time_slots=None):
+    if template_bytes is None:
+        template_bytes = DEFAULT_TEMPLATE_BYTES
+    excel_bytes = create_excel(schedule_data, template_bytes, time_slots)
+    excel_data = excel_bytes.getvalue()
+
+    with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_xlsx:
+        tmp_xlsx.write(excel_data)
+        xlsx_path = tmp_xlsx.name
+
+    pdf_path = xlsx_path.replace('.xlsx', '.pdf')
+
+    try:
+        subprocess.run([
+            'soffice',
+            '--headless',
+            '--convert-to', 'pdf',
+            '--outdir', os.path.dirname(pdf_path),
+            xlsx_path
+        ], check=True, timeout=60)
+
+        with open(pdf_path, 'rb') as f:
+            pdf_bytes = f.read()
+
+        os.unlink(xlsx_path)
+        os.unlink(pdf_path)
+
+        return BytesIO(pdf_bytes)
+
+    except (subprocess.CalledProcessError, FileNotFoundError, Exception) as e:
+        if os.path.exists(xlsx_path):
+            os.unlink(xlsx_path)
+        if os.path.exists(pdf_path):
+            os.unlink(pdf_path)
+        st.warning("LibreOffice not available. Using fallback PDF (formatting may differ).")
+        return create_fallback_pdf(schedule_data, time_slots)
+
+def create_fallback_pdf(schedule_data, time_slots=None):
+    if time_slots is None:
+        time_slots = get_time_slots(13)
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from io import BytesIO
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            rightMargin=15, leftMargin=15,
+                            topMargin=15, bottomMargin=15)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Title'],
+                                 alignment=1, fontSize=16, spaceAfter=8,
+                                 fontName='Helvetica-Bold')
+    elements.append(Paragraph("EOD REPORT", title_style))
+    elements.append(Spacer(1, 4))
+
+    detail_data = [
+        ["Name Of Employee", schedule_data.get("employee_name", "N/A")],
+        ["Position", schedule_data.get("position", "N/A")],
+        ["Date", schedule_data.get("date", "N/A")]
+    ]
+    detail_table = Table(detail_data, colWidths=[2.0*inch, 5.5*inch])
+    detail_table.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0), (-1,-1), 2),
+        ('RIGHTPADDING', (0,0), (-1,-1), 2),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('BOX', (0,0), (-1,-1), 0, colors.white),
+        ('INNERGRID', (0,0), (-1,-1), 0, colors.white),
+    ]))
+    elements.append(detail_table)
+    elements.append(Spacer(1, 10))
+
+    schedule = schedule_data.get("schedule", [])
+    table_data = [["Time", "Activity", "Description"]]
+    for entry in schedule:
+        table_data.append([
+            entry.get("slot", ""),
+            entry.get("activity", ""),
+            entry.get("description", "")
+        ])
+
+    col_widths = [1.2*inch, 2.2*inch, 3.9*inch]
+    schedule_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+    schedule_table.setStyle(TableStyle([
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTSIZE', (0,0), (-1,-1), 8),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#CCCCCC")),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0,0), (-1,0), 9),
+        ('ALIGN', (0,0), (-1,0), 'CENTER'),
+        ('WORDWRAP', (0,0), (-1,-1), True),
+    ]))
+    elements.append(schedule_table)
+
+    doc.build(elements)
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    return BytesIO(pdf_data)
 
 # ============= DISPLAY REPORT =============
-# (Same as before, included in full code below)
+def display_report(data, template_bytes, emp_name, time_slots):
+    st.markdown("### 📄 Report Preview")
+    table_rows_html = "".join([
+        f"<tr><td>{entry.get('slot', '')}</td><td>{entry.get('activity', '')}</td><td>{entry.get('description', '')}</td></tr>"
+        for entry in data.get("schedule", [])
+    ])
+    st.markdown(f"""
+    <div class="preview-card">
+        <div class="preview-title">EOD REPORT</div>
+        <div class="preview-detail">
+            <span class="preview-detail-label">Name Of Employee</span>
+            <span>{data.get("employee_name", "")}</span>
+        </div>
+        <div class="preview-detail">
+            <span class="preview-detail-label">Position</span>
+            <span>{data.get("position", "")}</span>
+        </div>
+        <div class="preview-detail">
+            <span class="preview-detail-label">Date</span>
+            <span>{data.get("date", "")}</span>
+        </div>
+        <table class="preview-table">
+            <thead><tr><th>Time</th><th>Activity</th><th>Description</th></tr></thead>
+            <tbody>{table_rows_html}</tbody>
+        </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+    excel_data = create_excel(data, template_bytes, time_slots)
+    pdf_data = create_pdf(data, template_bytes, time_slots)
+
+    file_date = parse_date(data.get("date", ""))
+    excel_filename = generate_filename(file_date, emp_name, "xlsx")
+    pdf_filename = generate_filename(file_date, emp_name, "pdf")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button(
+            label="📥 Download Excel",
+            data=excel_data,
+            file_name=excel_filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    with col2:
+        st.download_button(
+            label="📄 Download PDF",
+            data=pdf_data,
+            file_name=pdf_filename,
+            mime="application/pdf",
+            use_container_width=True
+        )
 
 # ============= CONFETTI =============
-# (Same as before, included in full code below)
+def confetti():
+    st.components.v1.html("""
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    <script>
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 }
+        });
+        setTimeout(() => {
+            confetti({
+                particleCount: 100,
+                spread: 50,
+                origin: { y: 0.5 }
+            });
+        }, 500);
+    </script>
+    """, height=0)
 
 # ============= STREAMLIT UI =============
-# (Same as before, but I'll include the full UI code)
+st.markdown("""
+<div class="main-header">
+    <h1>📋 EOD Report Generator</h1>
+    <p>AI‑powered End‑of‑Day reports – fast, accurate, and beautifully formatted</p>
+</div>
+""", unsafe_allow_html=True)
 
-# The rest of the code is identical to the previous version, but with the updated generate_schedule function.
-# To keep the answer concise, I'll provide the full code as a single block below.
+config = load_config()
+saved_provider = config.get("provider", "Groq (Fastest)")
+saved_model = config.get("model", "")
+saved_api_key = config.get("api_key", "")
+
+# ---- Sidebar ----
+with st.sidebar:
+    st.image("https://img.icons8.com/fluency/96/000000/google-forms.png", width=25)
+    if st.button(f"🌓 Switch to {'Light' if st.session_state.theme == 'dark' else 'Dark'} Theme", use_container_width=True):
+        toggle_theme()
+        st.rerun()
+
+    st.markdown("## 🕒 Schedule Settings")
+    lunch_hour = st.selectbox(
+        "Lunch Break Start",
+        options=list(LUNCH_OPTIONS.keys()),
+        format_func=lambda x: LUNCH_OPTIONS[x],
+        index=1,
+        help="Choose when the lunch break occurs. The time slots will adjust accordingly."
+    )
+
+    with st.expander("⚙️ Config", expanded=False):
+        provider = st.selectbox("AI Provider", options=list(PROVIDERS.keys()),
+                                index=list(PROVIDERS.keys()).index(saved_provider) if saved_provider in PROVIDERS else 0)
+        if PROVIDERS[provider]["api_key_required"]:
+            api_key = st.text_input("API Key", type="password",
+                                    value=saved_api_key if saved_provider == provider else "")
+            if "Groq" in provider:
+                st.caption("Get free key at [console.groq.com](https://console.groq.com)")
+        else:
+            api_key = None
+            st.info("Ollama – no key needed.")
+        model_name = st.text_input("Model (optional)",
+                                   placeholder=PROVIDERS[provider]["default_model"],
+                                   value=saved_model if saved_provider == provider else "")
+
+        if 'prev_provider' not in st.session_state:
+            st.session_state.prev_provider = provider
+            st.session_state.prev_model = model_name
+            st.session_state.prev_api_key = api_key
+
+        if (provider != st.session_state.prev_provider or
+            model_name != st.session_state.prev_model or
+            api_key != st.session_state.prev_api_key):
+            if not PROVIDERS[provider]["api_key_required"] or (api_key and api_key.strip()):
+                save_config(provider, model_name, api_key or "")
+                st.session_state.prev_provider = provider
+                st.session_state.prev_model = model_name
+                st.session_state.prev_api_key = api_key
+                st.success("✅ Saved")
+
+        if st.button("🗑️ Clear config"):
+            clear_config()
+            st.success("Config cleared.")
+            st.rerun()
+
+    with st.expander("👥 Employees", expanded=False):
+        employees = load_employees()
+        employee_names = [e["name"] for e in employees]
+        if employee_names:
+            selected_emp = st.selectbox("Select employee", employee_names,
+                                        index=employee_names.index(st.session_state.selected_employee_name) if st.session_state.selected_employee_name in employee_names else 0)
+            emp_details = next((e for e in employees if e["name"] == selected_emp), None)
+            if emp_details:
+                st.session_state.selected_employee_name = emp_details["name"]
+                st.session_state.selected_employee_position = emp_details["position"]
+        else:
+            selected_emp = None
+
+        with st.expander("➕ Add"):
+            new_name = st.text_input("Name")
+            new_pos = st.text_input("Position")
+            if st.button("Add"):
+                if new_name and new_pos:
+                    add_employee(new_name, new_pos)
+                    st.success(f"Added {new_name}")
+                    st.rerun()
+                else:
+                    st.warning("Fill both")
+
+        if selected_emp and st.button("🗑️ Delete"):
+            delete_employee(selected_emp)
+            st.success(f"Deleted {selected_emp}")
+            st.rerun()
+
+    st.divider()
+    st.markdown("## 📁 Template")
+
+    template_files = get_template_list()
+    if DEFAULT_TEMPLATE_BYTES is not None:
+        default_name = DEFAULT_TEMPLATE_FILE
+        if default_name not in template_files:
+            template_files.insert(0, default_name)
+    template_options = ["Built-in"] + template_files
+
+    selected_template = st.selectbox("Select Template", template_options)
+    if selected_template == "Built-in":
+        template_bytes = None
+        st.info("Using built‑in layout")
+    else:
+        template_bytes = load_template_bytes(selected_template)
+        if template_bytes is None:
+            st.warning(f"Template '{selected_template}' not found. Using built‑in.")
+            template_bytes = None
+        else:
+            st.success(f"Loaded '{selected_template}'")
+
+    uploaded_file = st.file_uploader("Upload .xlsx", type=["xlsx"])
+    if uploaded_file is not None:
+        save_path = os.path.join(TEMPLATE_DIR, uploaded_file.name)
+        with open(save_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        st.success(f"Saved '{uploaded_file.name}' to templates folder.")
+        st.rerun()
+
+    with st.expander("📜 History", expanded=False):
+        if st.button("🗑️ Clear History", use_container_width=True):
+            clear_history()
+            st.success("History cleared.")
+            st.rerun()
+
+        all_history = load_history()
+        employee_list = sorted(set(entry["employee_name"] for entry in all_history))
+        selected_filter = st.selectbox("Filter", ["All"] + employee_list)
+        if selected_filter != "All":
+            filtered_history = [h for h in all_history if h["employee_name"] == selected_filter]
+        else:
+            filtered_history = all_history
+
+        if filtered_history:
+            groups = {}
+            for entry in reversed(filtered_history):
+                emp = entry.get("employee_name", "Unknown")
+                if emp not in groups:
+                    groups[emp] = []
+                groups[emp].append(entry)
+            for emp, entries in groups.items():
+                with st.expander(f"👤 {emp} ({len(entries)})"):
+                    for idx, entry in enumerate(entries[:5]):
+                        display_date = entry.get("date", "N/A")
+                        timestamp = entry.get("timestamp", str(idx))
+                        if st.button(f"📂 {display_date}", key=f"load_{emp}_{timestamp}"):
+                            st.session_state.loaded_report = entry
+                            st.rerun()
+                        st.caption(f"Position: {entry.get('position', '')}")
+        else:
+            st.write("No reports yet.")
+
+        if "loaded_report" in st.session_state and st.session_state.loaded_report is not None:
+            if st.button("🗑️ Clear loaded", use_container_width=True):
+                st.session_state.loaded_report = None
+                st.rerun()
+
+# ---- Session state ----
+if "loaded_report" not in st.session_state:
+    st.session_state.loaded_report = None
+if "last_schedule" not in st.session_state:
+    st.session_state.last_schedule = None
+if "last_input" not in st.session_state:
+    st.session_state.last_input = ""
+if "last_config" not in st.session_state:
+    st.session_state.last_config = {}
+
+# ---- Main area ----
+left_col, right_col = st.columns([0.4, 0.6], gap="small")
+
+with left_col:
+    st.markdown("### ✍️ Inputs")
+    employees = load_employees()
+    employee_names = [e["name"] for e in employees]
+    if employee_names:
+        current_name = st.session_state.selected_employee_name
+        if current_name not in employee_names:
+            current_name = employee_names[0]
+        selected_emp_main = st.selectbox("👤 Employee", employee_names, index=employee_names.index(current_name))
+        emp_details_main = next((e for e in employees if e["name"] == selected_emp_main), None)
+        if emp_details_main:
+            st.session_state.selected_employee_name = emp_details_main["name"]
+            st.session_state.selected_employee_position = emp_details_main["position"]
+    else:
+        st.session_state.selected_employee_name = DEFAULT_EMPLOYEE
+        st.session_state.selected_employee_position = DEFAULT_POSITION
+
+    position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
+    report_date = st.date_input("📅 Date", value=datetime.now())
+
+    # ---- Task summary with pre-filled time slots ----
+    st.markdown("### 📝 Task per Time Slot")
+    st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
+
+    # Get short time formats
+    time_slots_short = get_time_slots_short(lunch_hour)
+    lunch_index = lunch_hour - 10  # because 10am is index 0
+
+    # Build the task summary with pre-filled times
+    if "task_summary" not in st.session_state:
+        lines = []
+        for i, short_time in enumerate(time_slots_short):
+            if i == lunch_index:
+                continue
+            lines.append(f"{short_time}: ")
+        st.session_state.task_summary = "\n".join(lines)
+
+    task_summary = st.text_area(
+        "",
+        value=st.session_state.task_summary,
+        height=300,
+        key="task_summary_area",
+        help="Type your task after each time slot. Example: 10:00-11:00: posted stories"
+    )
+
+    # Quick templates
+    templates_quick = {
+        "Feng Shui & Content": {
+            "10:00-11:00": "Posted Feng Shui stories",
+            "11:00-12:00": "Created post on July animal signs",
+            "12:00-13:00": "Started editing Kedarnath reel",
+            "14:00-15:00": "Created 15 AI creatives for reel",
+            "15:00-16:00": "Continued editing reel",
+            "16:00-17:00": "Reviewed performance",
+            "17:00-18:00": "Planned next steps"
+        },
+        "Meetings & Documentation": {
+            "10:00-11:00": "Team sync meeting",
+            "11:00-12:00": "Wrote meeting notes",
+            "12:00-13:00": "Follow-up emails",
+            "14:00-15:00": "Project planning",
+            "15:00-16:00": "Client call",
+            "16:00-17:00": "Prepared status report",
+            "17:00-18:00": "Reviewed and finalized"
+        },
+        "Development & Testing": {
+            "10:00-11:00": "Fixed bugs",
+            "11:00-12:00": "Developed new feature",
+            "12:00-13:00": "Code review",
+            "14:00-15:00": "Wrote tests",
+            "15:00-16:00": "Deployed to staging",
+            "16:00-17:00": "Updated documentation",
+            "17:00-18:00": "Sprint planning"
+        },
+        "Custom": {}
+    }
+    selected_template_quick = st.selectbox("📝 Quick template", list(templates_quick.keys()), key="quick_template")
+    if selected_template_quick != "Custom" and templates_quick[selected_template_quick]:
+        if st.button("📋 Load template", use_container_width=True):
+            lines = []
+            time_slots_short = get_time_slots_short(lunch_hour)
+            for short_time in time_slots_short:
+                if short_time == "13:00-14:00":
+                    continue
+                if short_time in templates_quick[selected_template_quick]:
+                    lines.append(f"{short_time}: {templates_quick[selected_template_quick][short_time]}")
+                else:
+                    lines.append(f"{short_time}: ")
+            st.session_state.task_summary = "\n".join(lines)
+            st.rerun()
+
+    st.session_state.task_summary = task_summary
+
+    col_gen, col_reg = st.columns(2)
+    with col_gen:
+        generate_clicked = st.button("🚀 Generate", type="primary", use_container_width=True)
+    with col_reg:
+        regenerate_clicked = st.button("🔄 Regenerate", use_container_width=True,
+                                       disabled=st.session_state.last_schedule is None)
+
+with right_col:
+    if st.session_state.loaded_report is not None:
+        st.markdown("### 📂 Loaded Report")
+        time_slots = get_time_slots(lunch_hour)
+        display_report(st.session_state.loaded_report, template_bytes,
+                       st.session_state.loaded_report.get("employee_name", "N/A"),
+                       time_slots)
+    elif st.session_state.last_schedule is not None:
+        st.markdown("### 📊 Generated Report")
+        time_slots = get_time_slots(lunch_hour)
+        display_report(st.session_state.last_schedule, template_bytes,
+                       st.session_state.last_schedule.get("employee_name", "N/A"),
+                       time_slots)
+    else:
+        st.info("👈 Type your tasks per time slot and click Generate.")
+
+# ---- Generation logic ----
+if generate_clicked or regenerate_clicked:
+    if regenerate_clicked:
+        tasks = st.session_state.last_input
+        cfg = st.session_state.last_config
+        provider_used = cfg["provider"]
+        api_key_used = cfg["api_key"]
+        model_used = cfg["model"]
+        emp_used = cfg["employee"]
+        pos_used = cfg["position"]
+        date_used = cfg["date"]
+        lunch_hour_used = cfg.get("lunch_hour", 13)
+    else:
+        tasks = st.session_state.task_summary.strip()
+        if not tasks:
+            st.warning("Please describe your daily tasks first.")
+            st.stop()
+        if PROVIDERS[provider]["api_key_required"] and not api_key:
+            st.warning(f"Please enter your {provider} API key.")
+            st.stop()
+        emp_used = st.session_state.selected_employee_name
+        pos_used = st.session_state.selected_employee_position
+        date_used = report_date.strftime("%Y-%m-%d")
+        lunch_hour_used = lunch_hour
+        st.session_state.last_input = tasks
+        st.session_state.last_config = {
+            "provider": provider,
+            "api_key": api_key,
+            "model": model_name,
+            "employee": emp_used,
+            "position": pos_used,
+            "date": date_used,
+            "lunch_hour": lunch_hour_used
+        }
+        provider_used = provider
+        api_key_used = api_key
+        model_used = model_name
+
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    def update_progress(progress, message):
+        progress_bar.progress(progress)
+        status_text.markdown(f"<span style='color:#667eea; font-weight:500;'>{message}</span>", unsafe_allow_html=True)
+
+    try:
+        update_progress(10, "🚀 Initializing...")
+        data = generate_schedule(tasks, emp_used, pos_used, date_used, provider_used, api_key_used, model_used, lunch_hour_used, progress_callback=update_progress)
+        update_progress(95, "✨ Finalizing...")
+
+        st.session_state.last_schedule = data
+        add_history_entry(emp_used, pos_used, date_used, data["schedule"])
+        emp_list = load_employees()
+        if not any(e["name"] == emp_used for e in emp_list):
+            add_employee(emp_used, pos_used)
+
+        st.balloons()
+        confetti()
+        st.success("✅ Report generated successfully! 🎉")
+        status_text.empty()
+        progress_bar.empty()
+        st.rerun()
+    except Exception as e:
+        st.error(f"❌ {e}")
+        progress_bar.empty()
+        status_text.empty()
+        st.session_state.last_schedule = None
