@@ -56,6 +56,7 @@ def parse_date(date_str):
 
 # ================= DYNAMIC TIME SLOTS =================
 def get_time_slots(lunch_hour):
+    """Return full time slot labels (e.g., '10:00 am to 11:00 am')."""
     slots = []
     for h in range(10, 18):
         start = h
@@ -76,7 +77,7 @@ def get_time_slots(lunch_hour):
     return slots
 
 def get_time_slots_short(lunch_hour):
-    """Short format for task summary: e.g., 10:00-11:00, 11:00-12:00 etc."""
+    """Return short format for task summary (e.g., '10:00-11:00')."""
     slots = []
     for h in range(10, 18):
         start = h
@@ -101,7 +102,7 @@ def create_short_to_full_map(lunch_hour):
     full = get_time_slots(lunch_hour)
     return dict(zip(short, full))
 
-# ================= DYNAMIC CSS =================
+# ================= THEME-BASED STYLING =================
 theme = st.session_state.theme
 bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
 bg_secondary = "rgba(20,20,40,0.85)" if theme == "dark" else "rgba(255,255,255,0.85)"
@@ -116,12 +117,16 @@ table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
 table_text = "#ffffff" if theme == "dark" else "#000000"
 table_border = "#555" if theme == "dark" else "#ddd"
 
-# Custom CSS for glossy cards
 st.markdown(f"""
 <style>
     .block-container {{
         padding: 0.6rem 0.8rem 0.3rem 0.8rem !important;
         max-width: 100% !important;
+    }}
+    .stApp {{
+        background: {bg_primary};
+        color: {text_color};
+        transition: background 0.3s ease, color 0.3s ease;
     }}
     .main-header {{
         background: {header_grad};
@@ -180,9 +185,10 @@ st.markdown(f"""
         border-radius: 10px;
         padding: 0.3rem 0.6rem;
         margin-bottom: 0.3rem;
-        border: 1px solid rgba(255,255,255,0.1);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        border: 1px solid {border_color};
+        box-shadow: 0 4px 12px {shadow_color};
         transition: all 0.3s ease;
+        color: {text_color};
     }}
     .slot-card:hover {{
         transform: scale(1.01);
@@ -195,17 +201,167 @@ st.markdown(f"""
         display: inline-block;
         min-width: 100px;
     }}
-    .slot-input {{
-        background: rgba(255,255,255,0.05) !important;
-        border: 1px solid rgba(255,255,255,0.1) !important;
-        border-radius: 6px !important;
-        color: {text_color} !important;
-        padding: 0.2rem 0.5rem !important;
-        width: 100% !important;
-    }}
     .lunch-card {{
         background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(255,152,0,0.2));
         border: 1px solid rgba(255,193,7,0.3);
+        color: {text_color};
+    }}
+    .preview-card {{
+        border: 1px solid {preview_border};
+        border-radius: 10px;
+        padding: 8px 12px;
+        background: {preview_bg};
+        box-shadow: 0 4px 15px {shadow_color};
+        margin-bottom: 6px;
+        backdrop-filter: blur(8px);
+        transition: all 0.4s ease;
+        animation: slideUp 0.8s ease;
+        color: {text_color};
+    }}
+    @keyframes slideUp {{
+        0% {{ opacity: 0; transform: translateY(40px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .preview-title {{ font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }}
+    .preview-detail {{ display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px solid {preview_border}; font-size: 13px; }}
+    .preview-detail-label {{ font-weight: bold; width: 100px; }}
+    .preview-table {{
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 6px;
+        font-size: 12px;
+        color: {table_text};
+    }}
+    .preview-table th {{
+        background-color: {table_header_bg};
+        font-weight: bold;
+        border: 1px solid {table_border};
+        padding: 3px 6px;
+        text-align: left;
+        color: {text_color};
+    }}
+    .preview-table td {{
+        border: 1px solid {table_border};
+        padding: 3px 6px;
+        text-align: left;
+    }}
+    .stTextInput, .stDateInput, .stSelectbox, .stTextArea {{ margin-bottom: 0.1rem !important; }}
+    .stButton button {{
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background: {header_grad} !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4) !important;
+        min-height: 44px !important;
+        width: 100% !important;
+    }}
+    .stButton button:hover {{
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6) !important;
+    }}
+    .stDownloadButton button {{
+        padding: 0.3rem 0.8rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+        background: #28a745 !important;
+        color: white !important;
+        border: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 2px 10px rgba(40, 167, 69, 0.4) !important;
+        min-height: 44px !important;
+        width: 100% !important;
+    }}
+    .stDownloadButton button:hover {{
+        transform: scale(1.03);
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.6) !important;
+    }}
+    .stDownloadButton button:nth-of-type(2) {{
+        background: #dc3545 !important;
+        box-shadow: 0 2px 10px rgba(220, 53, 69, 0.4) !important;
+    }}
+    .stDownloadButton button:nth-of-type(2):hover {{
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.6) !important;
+    }}
+    .css-1d391kg {{
+        background: {bg_secondary} !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        color: {text_color} !important;
+        padding: 0.2rem 0.3rem !important;
+        border-right: 1px solid {border_color} !important;
+        box-shadow: 4px 0 30px {shadow_color} !important;
+        transition: all 0.3s ease;
+    }}
+    .css-1d391kg * {{
+        font-size: 0.8rem !important;
+        color: {text_color} !important;
+    }}
+    .css-1d391kg .stSelectbox select,
+    .css-1d391kg .stTextInput input,
+    .css-1d391kg .stDateInput input {{
+        background: rgba(60, 60, 90, 0.5) !important;
+        color: {text_color} !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 6px !important;
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.4rem !important;
+        height: 2.2rem !important;
+        backdrop-filter: blur(4px) !important;
+    }}
+    .css-1d391kg .stButton button {{
+        background: rgba(120, 120, 200, 0.7) !important;
+        color: {text_color} !important;
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.6rem !important;
+        height: 2rem !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 6px !important;
+        backdrop-filter: blur(4px) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+        min-height: 38px !important;
+    }}
+    .css-1d391kg .stButton button:hover {{
+        background: rgba(150, 150, 220, 0.9) !important;
+        transform: scale(1.02);
+    }}
+    .css-1d391kg .stExpander {{
+        border: 1px solid {border_color} !important;
+        background: rgba(40, 40, 60, 0.4) !important;
+        border-radius: 8px !important;
+        padding: 0.1rem 0.2rem !important;
+        backdrop-filter: blur(8px) !important;
+        margin-bottom: 0.2rem !important;
+    }}
+    .css-1d391kg .stExpander .stExpanderHeader {{
+        color: {text_color} !important;
+        background: rgba(40, 40, 60, 0.2) !important;
+        font-size: 0.8rem !important;
+        padding: 0.2rem 0.4rem !important;
+        border-radius: 6px !important;
+    }}
+    .css-1d391kg hr {{
+        border-color: {border_color} !important;
+        margin: 0.15rem 0 !important;
+    }}
+    .css-1d391kg .stImage {{
+        margin-bottom: 0.1rem !important;
+        filter: drop-shadow(0 0 8px rgba(102, 126, 234, 0.3)) !important;
+    }}
+    @media (max-width: 768px) {{
+        .main-header h1 {{ font-size: 1.2rem !important; }}
+        .main-header p {{ font-size: 0.7rem !important; }}
+        .stButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
+        .stDownloadButton button {{ font-size: 0.9rem !important; padding: 0.4rem 0.6rem !important; min-height: 48px !important; }}
+        .preview-table {{ font-size: 10px !important; }}
+        .preview-table th, .preview-table td {{ padding: 2px 4px !important; }}
+        .css-1d391kg {{ padding: 0.1rem 0.2rem !important; }}
+        .css-1d391kg * {{ font-size: 0.7rem !important; }}
+        .css-1d391kg .stButton button {{ font-size: 0.7rem !important; padding: 0.1rem 0.3rem !important; min-height: 34px !important; }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -217,8 +373,6 @@ EMPLOYEES_FILE = "employees.json"
 
 DEFAULT_EMPLOYEE = "Omkar Patil"
 DEFAULT_POSITION = "Social Media & Digital Marketing Executive"
-
-LUNCH_OPTIONS = {12: "12:00 PM", 13: "1:00 PM", 14: "2:00 PM"}
 
 PROVIDERS = {
     "Groq (Fastest)": {
@@ -287,7 +441,6 @@ def load_config():
     return load_json_file(CONFIG_FILE, {})
 
 def save_config(provider, model, api_key=None):
-    # Save provider, model, and api_key (if provided)
     data = {"provider": provider, "model": model}
     if api_key is not None:
         data["api_key"] = api_key
@@ -297,7 +450,7 @@ def clear_config():
     if os.path.exists(CONFIG_FILE):
         os.remove(CONFIG_FILE)
 
-# ============= EMPLOYEE & HISTORY (unchanged) =============
+# ============= EMPLOYEE & HISTORY =============
 def load_employees():
     return load_json_file(EMPLOYEES_FILE, [])
 
@@ -803,7 +956,7 @@ st.markdown("""
 config = load_config()
 saved_provider = config.get("provider", "Groq (Fastest)")
 saved_model = config.get("model", "")
-saved_api_key = config.get("api_key", "")  # might be empty
+saved_api_key = config.get("api_key", "")
 
 # ---- Sidebar ----
 with st.sidebar:
@@ -812,30 +965,28 @@ with st.sidebar:
         toggle_theme()
         st.rerun()
 
-    st.markdown("## 🕒 Schedule Settings")
-    lunch_hour = st.selectbox(
-        "Lunch Break Start",
-        options=list(LUNCH_OPTIONS.keys()),
-        format_func=lambda x: LUNCH_OPTIONS[x],
-        index=1,
-        help="Choose when the lunch break occurs. The time slots will adjust accordingly."
+    # ---- Lunch Break Slider ----
+    st.markdown("## 🕒 Lunch Break")
+    lunch_hour = st.slider(
+        "Select lunch break start:",
+        min_value=12,
+        max_value=14,
+        value=13,
+        step=1,
+        format="%d:00 PM"
     )
 
     with st.expander("⚙️ Config", expanded=False):
         provider = st.selectbox("AI Provider", options=list(PROVIDERS.keys()),
                                 index=list(PROVIDERS.keys()).index(saved_provider) if saved_provider in PROVIDERS else 0)
         if PROVIDERS[provider]["api_key_required"]:
-            # Check if API key is already saved
             if saved_api_key:
-                # Key is set – don't display the input, show a status message and a change button
                 st.success("✅ API key is set")
                 if st.button("🔄 Change API Key"):
-                    # Clear the saved key in config
-                    save_config(provider, model_name, "")  # remove key
+                    save_config(provider, model_name, "")
                     st.rerun()
             else:
-                # No key saved – show input
-                api_key = st.text_input("API Key", type="password", key="api_key_input")
+                api_key = st.text_input("API Key", type="password")
                 if st.button("💾 Save API Key"):
                     if api_key:
                         save_config(provider, model_name, api_key)
@@ -852,14 +1003,12 @@ with st.sidebar:
                                    placeholder=PROVIDERS[provider]["default_model"],
                                    value=saved_model if saved_provider == provider else "")
 
-        # Save provider and model changes (without overwriting key if already set)
         if 'prev_provider' not in st.session_state:
             st.session_state.prev_provider = provider
             st.session_state.prev_model = model_name
 
         if (provider != st.session_state.prev_provider or
             model_name != st.session_state.prev_model):
-            # Only save provider/model, keep existing key if any
             current_key = saved_api_key if saved_api_key else ""
             save_config(provider, model_name, current_key)
             st.session_state.prev_provider = provider
@@ -1137,15 +1286,11 @@ if generate_clicked or regenerate_clicked:
             st.stop()
         # Retrieve API key from config if not provided by input
         if PROVIDERS[provider]["api_key_required"]:
-            # Use saved key if available, else use the input (if shown) or warn
             saved_key = load_config().get("api_key", "")
             if saved_key:
                 api_key = saved_key
             else:
-                # If no saved key, the input must have been shown; but we might have hidden it.
-                # We'll try to get from session state or fallback to input.
-                # Since we might not have the input field, we'll check config again.
-                api_key = ""  # will be caught by the next check
+                api_key = ""
             if not api_key:
                 st.warning("Please enter your API key in the sidebar config.")
                 st.stop()
