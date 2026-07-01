@@ -100,6 +100,44 @@ def create_short_to_full_map(lunch_hour):
     full = get_time_slots(lunch_hour)
     return dict(zip(short, full))
 
+# ================= REBUILD SCHEDULE FOR LUNCH CHANGE =================
+def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
+    """Given an old schedule list, return a new one with lunch at the specified hour."""
+    if not old_schedule:
+        return None
+    new_slots = get_time_slots(lunch_hour)
+    hour_map = {}
+    for entry in old_schedule:
+        slot_label = entry["slot"]
+        match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
+        if match:
+            hour = int(match.group(1))
+            if match.group(2) == 'pm' and hour != 12:
+                hour += 12
+            elif match.group(2) == 'am' and hour == 12:
+                hour = 0
+            if entry["activity"] != "Lunch Break":
+                hour_map[hour] = (entry["activity"], entry["description"])
+    new_schedule = []
+    for slot_label in new_slots:
+        match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
+        if match:
+            hour = int(match.group(1))
+            if match.group(2) == 'pm' and hour != 12:
+                hour += 12
+            elif match.group(2) == 'am' and hour == 12:
+                hour = 0
+            if hour == lunch_hour:
+                new_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
+            elif hour in hour_map:
+                act, desc = hour_map[hour]
+                new_schedule.append({"slot": slot_label, "activity": act, "description": desc})
+            else:
+                new_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
+        else:
+            new_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
+    return new_schedule
+
 # ================= THEME-BASED STYLING =================
 theme = st.session_state.theme
 bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
@@ -666,7 +704,6 @@ Date: {report_date}
                 entry["description"] = entry.get("description", "No description provided.")
             complete_schedule.append(entry)
         else:
-            # Slot not in AI response – use default or dash if forced
             if slot in force_dash_slots:
                 complete_schedule.append({"slot": slot, "activity": "-", "description": "-"})
             else:
@@ -682,7 +719,7 @@ Date: {report_date}
     data["date"] = data.get("date", report_date)
     return data
 
-# ============= EXCEL GENERATION (unchanged) =============
+# ============= EXCEL GENERATION =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -767,7 +804,7 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
     output.seek(0)
     return output
 
-# ============= PDF GENERATION (unchanged) =============
+# ============= PDF GENERATION =============
 def create_pdf_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -925,14 +962,37 @@ with st.sidebar:
 
     # ---- Lunch Break Slider ----
     st.markdown("## 🕒 Lunch Break")
+    # Track previous lunch hour to detect changes
+    if "prev_lunch_hour" not in st.session_state:
+        st.session_state.prev_lunch_hour = 13
+
     lunch_hour = st.slider(
         "Select lunch break start:",
         min_value=12,
         max_value=14,
-        value=13,
+        value=st.session_state.prev_lunch_hour,
         step=1,
         format="%d:00 PM"
     )
+
+    # If lunch hour changed and we have a current schedule, rebuild it
+    if lunch_hour != st.session_state.prev_lunch_hour:
+        st.session_state.prev_lunch_hour = lunch_hour
+        if "current_schedule" in st.session_state and st.session_state.current_schedule is not None:
+            new_schedule = rebuild_schedule_for_lunch(lunch_hour, st.session_state.current_schedule)
+            if new_schedule:
+                st.session_state.current_schedule = new_schedule
+                # Also update last_schedule for downloads
+                if "last_schedule" in st.session_state and st.session_state.last_schedule is not None:
+                    old_schedule_data = st.session_state.last_schedule
+                    schedule_data = {
+                        "employee_name": old_schedule_data.get("employee_name", st.session_state.selected_employee_name),
+                        "position": old_schedule_data.get("position", st.session_state.selected_employee_position),
+                        "date": old_schedule_data.get("date", datetime.now().strftime("%Y-%m-%d")),
+                        "schedule": new_schedule
+                    }
+                    st.session_state.last_schedule = schedule_data
+                st.rerun()
 
     with st.expander("⚙️ Config", expanded=False):
         provider = st.selectbox("AI Provider", options=list(PROVIDERS.keys()),
