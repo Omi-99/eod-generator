@@ -102,7 +102,6 @@ def create_short_to_full_map(lunch_hour):
 
 # ================= REBUILD SCHEDULE FOR LUNCH CHANGE =================
 def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
-    """Given an old schedule list, return a new one with lunch at the specified hour."""
     if not old_schedule:
         return None
     new_slots = get_time_slots(lunch_hour)
@@ -153,6 +152,7 @@ table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
 table_text = "#ffffff" if theme == "dark" else "#000000"
 table_border = "#555" if theme == "dark" else "#ddd"
 
+# Mobile-responsive CSS
 st.markdown(f"""
 <style>
     .block-container {{
@@ -225,6 +225,9 @@ st.markdown(f"""
         box-shadow: 0 4px 12px {shadow_color};
         transition: all 0.3s ease;
         color: {text_color};
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
     }}
     .slot-card:hover {{
         transform: scale(1.01);
@@ -234,8 +237,8 @@ st.markdown(f"""
         font-weight: 600;
         font-size: 0.85rem;
         color: {text_color};
-        display: inline-block;
-        min-width: 100px;
+        min-width: 90px;
+        margin-right: 8px;
     }}
     .lunch-card {{
         background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(255,152,0,0.2));
@@ -398,6 +401,9 @@ st.markdown(f"""
         .css-1d391kg {{ padding: 0.1rem 0.2rem !important; }}
         .css-1d391kg * {{ font-size: 0.7rem !important; }}
         .css-1d391kg .stButton button {{ font-size: 0.7rem !important; padding: 0.1rem 0.3rem !important; min-height: 34px !important; }}
+        .slot-label {{ font-size: 0.75rem; min-width: 70px; }}
+        .slot-card {{ padding: 0.2rem 0.4rem; }}
+        .stTextInput input {{ font-size: 0.8rem !important; }}
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -962,7 +968,6 @@ with st.sidebar:
 
     # ---- Lunch Break Slider ----
     st.markdown("## 🕒 Lunch Break")
-    # Track previous lunch hour to detect changes
     if "prev_lunch_hour" not in st.session_state:
         st.session_state.prev_lunch_hour = 13
 
@@ -975,14 +980,12 @@ with st.sidebar:
         format="%d:00 PM"
     )
 
-    # If lunch hour changed and we have a current schedule, rebuild it
     if lunch_hour != st.session_state.prev_lunch_hour:
         st.session_state.prev_lunch_hour = lunch_hour
         if "current_schedule" in st.session_state and st.session_state.current_schedule is not None:
             new_schedule = rebuild_schedule_for_lunch(lunch_hour, st.session_state.current_schedule)
             if new_schedule:
                 st.session_state.current_schedule = new_schedule
-                # Also update last_schedule for downloads
                 if "last_schedule" in st.session_state and st.session_state.last_schedule is not None:
                     old_schedule_data = st.session_state.last_schedule
                     schedule_data = {
