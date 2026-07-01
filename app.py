@@ -103,6 +103,16 @@ def get_full_to_short_map(lunch_hour):
     short_to_full = create_short_to_full_map(lunch_hour)
     return {v: k for k, v in short_to_full.items()}
 
+# ================= NORMALIZE SLOT LABELS =================
+def normalize_slot_label(label):
+    """Convert to lowercase, remove extra spaces, and standardise 'to'."""
+    label = label.lower().strip()
+    # Replace multiple spaces with single
+    label = re.sub(r'\s+', ' ', label)
+    # Ensure 'to' is used (not dash or other)
+    label = re.sub(r'\s*[-–]\s*', ' to ', label)
+    return label
+
 # ================= REBUILD SCHEDULE FOR LUNCH CHANGE =================
 def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
     if not old_schedule:
@@ -529,9 +539,9 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION (NO FALLBACK) =============
+# ============= AI GENERATION (WITH SLOT NORMALISATION & RETRY) =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
-    # Validate API key if required
+    # Validate API key
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"❌ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
 
@@ -540,9 +550,11 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
     short_to_full = create_short_to_full_map(lunch_hour)
     full_to_short = get_full_to_short_map(lunch_hour)
 
+    # Normalised expected slots
+    norm_expected = {normalize_slot_label(slot): slot for slot in slot_labels}
+
     # --- Parse user tasks ---
     task_mapping = {}
-    force_dash_slots = set()
     if user_tasks:
         for line in user_tasks.split('\n'):
             line = line.strip()
@@ -553,14 +565,10 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
                 short_time, task = match.groups()
                 task = task.strip()
                 task_mapping[short_time] = task
-                if task == "-":
-                    force_dash_slots.add(short_time)
 
-    # --- Build AI prompt ---
-    # We'll send the tasks as a JSON mapping, and ask the AI to generate descriptions.
-    # The AI must return a JSON where each slot has "activity" (which should be the user's task) and "description".
-    structured_tasks_json = json.dumps(task_mapping, indent=2)
-    prompt = f"""
+    # --- First AI call ---
+    def call_ai(prompt_extra=""):
+        full_prompt = f"""
 You are an assistant that fills an End‑of‑Day work report.
 
 The report has exactly these 8 hourly slots (lunch break is fixed at **{lunch_label}** – you MUST set activity="Lunch Break" and description="Lunch Break" for that slot):
@@ -568,7 +576,7 @@ The report has exactly these 8 hourly slots (lunch break is fixed at **{lunch_la
 All slots must be filled. Do not leave any slot empty.
 
 The user has provided the following tasks for specific time slots (short slot → task):
-{structured_tasks_json}
+{json.dumps(task_mapping, indent=2)}
 
 Instructions:
 - For each time slot, you must use the user's provided task as the **activity** exactly as given.
@@ -585,141 +593,166 @@ Return **only** a valid JSON object with:
 
 Use double quotes for all keys and string values. No trailing commas. Do not include any text outside the JSON.
 
+{prompt_extra}
+
 Employee: {employee_name}
 Position: {position}
 Date: {report_date}
 """
-    timeout_seconds = 60 if provider == "Ollama (local)" else 30
-    max_retries = 2
-    last_error = None
-    raw_response = None
-
-    for attempt in range(max_retries):
-        if progress_callback:
-            progress_callback(30 + attempt * 20, f"Contacting AI ({provider})...")
-        try:
-            if provider == "Groq (Fastest)":
-                client = Groq(api_key=api_key)
-                model = model_name or PROVIDERS[provider]["default_model"]
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.2,
-                    max_tokens=600,
-                    timeout=timeout_seconds
-                )
-                raw_response = response.choices[0].message.content
-            elif provider == "OpenAI (ChatGPT)":
-                client = openai.OpenAI(api_key=api_key)
-                model = model_name or PROVIDERS[provider]["default_model"]
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.2,
-                    max_tokens=600,
-                    timeout=timeout_seconds
-                )
-                raw_response = response.choices[0].message.content
-            elif provider == "Google Gemini":
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel(model_name or PROVIDERS[provider]["default_model"])
-                response = model.generate_content(
-                    prompt,
-                    generation_config=genai.types.GenerationConfig(temperature=0.2, max_output_tokens=600),
-                    request_options={"timeout": timeout_seconds}
-                )
-                raw_response = response.text
-            elif provider == "Ollama (local)":
-                try:
-                    requests.get("http://localhost:11434", timeout=5)
-                except requests.ConnectionError:
-                    raise RuntimeError("Ollama is not running. Please start Ollama.")
-                client = openai.OpenAI(base_url="http://localhost:11434/v1", api_key="dummy")
-                model = model_name or PROVIDERS[provider]["default_model"]
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.2,
-                    max_tokens=600,
-                    timeout=timeout_seconds
-                )
-                raw_response = response.choices[0].message.content
-            else:
-                raise ValueError("Unsupported provider")
-
-            # --- Parse JSON ---
+        timeout_seconds = 60 if provider == "Ollama (local)" else 30
+        if provider == "Groq (Fastest)":
+            client = Groq(api_key=api_key)
+            model = model_name or PROVIDERS[provider]["default_model"]
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=600,
+                timeout=timeout_seconds
+            )
+            return response.choices[0].message.content
+        elif provider == "OpenAI (ChatGPT)":
+            client = openai.OpenAI(api_key=api_key)
+            model = model_name or PROVIDERS[provider]["default_model"]
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=600,
+                timeout=timeout_seconds
+            )
+            return response.choices[0].message.content
+        elif provider == "Google Gemini":
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel(model_name or PROVIDERS[provider]["default_model"])
+            response = model.generate_content(
+                full_prompt,
+                generation_config=genai.types.GenerationConfig(temperature=0.2, max_output_tokens=600),
+                request_options={"timeout": timeout_seconds}
+            )
+            return response.text
+        elif provider == "Ollama (local)":
             try:
-                data = extract_and_clean_json(raw_response)
-            except Exception as parse_error:
-                # Provide detailed error with raw response snippet
-                raise RuntimeError(f"Failed to parse AI response as JSON. Raw response (first 500 chars):\n{raw_response[:500]}\n\nError: {parse_error}")
+                requests.get("http://localhost:11434", timeout=5)
+            except requests.ConnectionError:
+                raise RuntimeError("Ollama is not running. Please start Ollama.")
+            client = openai.OpenAI(base_url="http://localhost:11434/v1", api_key="dummy")
+            model = model_name or PROVIDERS[provider]["default_model"]
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": full_prompt}],
+                temperature=0.2,
+                max_tokens=600,
+                timeout=timeout_seconds
+            )
+            return response.choices[0].message.content
+        else:
+            raise ValueError("Unsupported provider")
 
-            # --- Validate and build final schedule ---
-            if "schedule" not in data or not isinstance(data["schedule"], list):
-                raise ValueError("AI response missing 'schedule' array.")
-
-            schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
-            complete_schedule = []
-
-            for slot_label in slot_labels:
-                if slot_label == lunch_label:
-                    complete_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
-                else:
-                    short_key = full_to_short.get(slot_label, "")
-                    user_task = task_mapping.get(short_key, "")
-
-                    if slot_label in schedule_dict:
-                        ai_entry = schedule_dict[slot_label]
-                        # Use user's task as activity if provided, else AI's activity
-                        if user_task:
-                            if user_task == "-":
-                                activity = "-"
-                                description = "-"
-                            else:
-                                activity = user_task
-                                # Use AI's description or fallback
-                                description = ai_entry.get("description", "")
-                                if not description or description == "No description provided.":
-                                    # If AI didn't provide a description, we raise an error because we want AI to always generate one.
-                                    raise ValueError(f"AI did not provide a description for slot {slot_label}. Raw response: {raw_response[:200]}")
-                        else:
-                            # No user task, use AI's activity and description
-                            activity = ai_entry.get("activity", "No specific task")
-                            description = ai_entry.get("description", "No description provided.")
-                            if description == "No description provided.":
-                                raise ValueError(f"AI did not provide a description for slot {slot_label}. Raw response: {raw_response[:200]}")
-                        complete_schedule.append({
-                            "slot": slot_label,
-                            "activity": activity,
-                            "description": description
-                        })
+    # First attempt
+    raw_response = None
+    data = None
+    for attempt in range(2):  # two attempts with possible extra instruction
+        if progress_callback:
+            progress_callback(30 + attempt * 20, f"Contacting AI ({provider})... attempt {attempt+1}")
+        try:
+            if attempt == 1:
+                # Add extra instruction to include all slots
+                extra = "IMPORTANT: You MUST include ALL of the following slots exactly as listed: " + ", ".join(slot_labels)
+            else:
+                extra = ""
+            raw = call_ai(extra)
+            raw_response = raw
+            parsed = extract_and_clean_json(raw)
+            if "schedule" in parsed and isinstance(parsed["schedule"], list):
+                # Normalise the received slots
+                norm_schedule = {}
+                for entry in parsed["schedule"]:
+                    if "slot" in entry:
+                        norm_key = normalize_slot_label(entry["slot"])
+                        norm_schedule[norm_key] = entry
+                # Build complete schedule
+                complete_schedule = []
+                missing_slots = []
+                for exp_norm, exp_orig in norm_expected.items():
+                    if exp_norm in norm_schedule:
+                        entry = norm_schedule[exp_norm]
+                        # Use original expected label for consistency
+                        entry["slot"] = exp_orig
+                        complete_schedule.append(entry)
                     else:
-                        # Slot missing in AI response – should not happen
-                        raise ValueError(f"AI response missing slot: {slot_label}")
-
-            # Check that all slots are filled
-            if len(complete_schedule) != len(slot_labels):
-                raise ValueError(f"Expected {len(slot_labels)} slots, got {len(complete_schedule)}.")
-
-            data["schedule"] = complete_schedule
-            data["employee_name"] = data.get("employee_name", employee_name)
-            data["position"] = data.get("position", position)
-            data["date"] = data.get("date", report_date)
-            # Store raw response for debugging
-            data["_raw_response"] = raw_response
-            return data
-
+                        missing_slots.append(exp_orig)
+                if not missing_slots:
+                    # All slots present
+                    parsed["schedule"] = complete_schedule
+                    data = parsed
+                    break
+                else:
+                    # Some slots missing, raise error to retry with extra instruction
+                    raise ValueError(f"Missing slots: {', '.join(missing_slots)}")
+            else:
+                raise ValueError("No 'schedule' array in response")
         except Exception as e:
             last_error = str(e)
-            if attempt == max_retries - 1:
-                # Re-raise the error to be caught in the UI
-                raise RuntimeError(f"AI generation failed after {max_retries} attempts.\nLast error: {last_error}")
+            if attempt == 1:
+                # Failed after second attempt, raise with details
+                raise RuntimeError(f"AI generation failed after 2 attempts.\nLast error: {last_error}")
             else:
-                time.sleep(2)
+                # First attempt failed, continue to second attempt
                 continue
 
-    # Should never reach here
-    raise RuntimeError("Unexpected error in AI generation.")
+    if data is None:
+        raise RuntimeError("Unexpected error: data is None")
+
+    # Now data has all slots. We'll override activity with user tasks and ensure descriptions exist.
+    schedule_dict = {entry["slot"]: entry for entry in data["schedule"]}
+    final_schedule = []
+    for slot_label in slot_labels:
+        if slot_label == lunch_label:
+            final_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
+        else:
+            short_key = full_to_short.get(slot_label, "")
+            user_task = task_mapping.get(short_key, "")
+            if slot_label in schedule_dict:
+                ai_entry = schedule_dict[slot_label]
+                if user_task:
+                    if user_task == "-":
+                        activity = "-"
+                        description = "-"
+                    else:
+                        activity = user_task
+                        # Use AI description if available, else generate a fallback
+                        description = ai_entry.get("description", "")
+                        if not description or description == "No description provided.":
+                            # Fallback description (should rarely happen)
+                            description = f"Worked on: {user_task}"
+                else:
+                    activity = ai_entry.get("activity", "No specific task")
+                    description = ai_entry.get("description", "No description provided.")
+                    if description == "No description provided.":
+                        description = f"Worked on: {activity}"
+                final_schedule.append({
+                    "slot": slot_label,
+                    "activity": activity,
+                    "description": description
+                })
+            else:
+                # Shouldn't happen because we ensured all slots exist
+                # But just in case, create with user task or generic
+                if user_task:
+                    if user_task == "-":
+                        final_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
+                    else:
+                        final_schedule.append({"slot": slot_label, "activity": user_task, "description": f"Task: {user_task}"})
+                else:
+                    final_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
+
+    data["schedule"] = final_schedule
+    data["employee_name"] = data.get("employee_name", employee_name)
+    data["position"] = data.get("position", position)
+    data["date"] = data.get("date", report_date)
+    data["_raw_response"] = raw_response
+    return data
 
 # ============= EXCEL GENERATION =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
@@ -1424,8 +1457,8 @@ if generate_clicked or regenerate_clicked:
         st.rerun()
     except Exception as e:
         st.error(f"❌ {e}")
-        # Show the raw response if available (from the exception)
-        if "raw_response" in locals():
+        # Show the raw response if available
+        if "raw_response" in locals() and raw_response:
             with st.expander("📜 Raw AI Response (to help debug)"):
                 st.code(raw_response, language="json")
         progress_bar.empty()
