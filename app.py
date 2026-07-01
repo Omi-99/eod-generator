@@ -4,6 +4,7 @@ import re
 import os
 import time
 import shutil
+import pandas as pd
 from datetime import datetime
 import openai
 from groq import Groq
@@ -669,8 +670,8 @@ Date: {report_date}
     data["date"] = data.get("date", report_date)
     return data
 
-# ============= EXCEL GENERATION =============
-def create_excel(schedule_data, template_bytes=None, time_slots=None):
+# ============= EXCEL GENERATION (now accepts a schedule list) =============
+def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
     if time_slots is None:
@@ -739,10 +740,12 @@ def create_excel(schedule_data, template_bytes=None, time_slots=None):
     safe_write('C4', schedule_data.get("position", DEFAULT_POSITION))
     safe_write('C5', schedule_data.get("date", datetime.now().strftime("%Y-%m-%d")))
 
+    # Use the schedule list from the data
+    schedule_list = schedule_data.get("schedule", [])
     start_row = 8
     for idx, slot in enumerate(time_slots):
         row = start_row + idx
-        entry = next((item for item in schedule_data.get("schedule", []) if item.get("slot", "").strip().lower() == slot.lower()), None)
+        entry = next((item for item in schedule_list if item.get("slot", "").strip().lower() == slot.lower()), None)
         activity = entry.get("activity", "No specific task") if entry else "No specific task"
         description = entry.get("description", "No description provided.") if entry else "No description provided."
         safe_write(f'C{row}', activity)
@@ -754,10 +757,10 @@ def create_excel(schedule_data, template_bytes=None, time_slots=None):
     return output
 
 # ============= PDF GENERATION =============
-def create_pdf(schedule_data, template_bytes=None, time_slots=None):
+def create_pdf_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
-    excel_bytes = create_excel(schedule_data, template_bytes, time_slots)
+    excel_bytes = create_excel_from_schedule(schedule_data, template_bytes, time_slots)
     excel_data = excel_bytes.getvalue()
 
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_xlsx:
@@ -835,9 +838,9 @@ def create_fallback_pdf(schedule_data, time_slots=None):
     elements.append(detail_table)
     elements.append(Spacer(1, 10))
 
-    schedule = schedule_data.get("schedule", [])
+    schedule_list = schedule_data.get("schedule", [])
     table_data = [["Time", "Activity", "Description"]]
-    for entry in schedule:
+    for entry in schedule_list:
         table_data.append([
             entry.get("slot", ""),
             entry.get("activity", ""),
@@ -868,60 +871,6 @@ def create_fallback_pdf(schedule_data, time_slots=None):
     pdf_data = buffer.getvalue()
     buffer.close()
     return BytesIO(pdf_data)
-
-# ============= DISPLAY REPORT =============
-def display_report(data, template_bytes, emp_name, time_slots):
-    st.markdown("### 📄 Report Preview")
-    table_rows_html = "".join([
-        f"<tr><td>{entry.get('slot', '')}</td><td>{entry.get('activity', '')}</td><td>{entry.get('description', '')}</td></tr>"
-        for entry in data.get("schedule", [])
-    ])
-    st.markdown(f"""
-    <div class="preview-card">
-        <div class="preview-title">EOD REPORT</div>
-        <div class="preview-detail">
-            <span class="preview-detail-label">Name Of Employee</span>
-            <span>{data.get("employee_name", "")}</span>
-        </div>
-        <div class="preview-detail">
-            <span class="preview-detail-label">Position</span>
-            <span>{data.get("position", "")}</span>
-        </div>
-        <div class="preview-detail">
-            <span class="preview-detail-label">Date</span>
-            <span>{data.get("date", "")}</span>
-        </div>
-        <table class="preview-table">
-            <thead><tr><th>Time</th><th>Activity</th><th>Description</th></tr></thead>
-            <tbody>{table_rows_html}</tbody>
-        </table>
-    </div>
-    """, unsafe_allow_html=True)
-
-    excel_data = create_excel(data, template_bytes, time_slots)
-    pdf_data = create_pdf(data, template_bytes, time_slots)
-
-    file_date = parse_date(data.get("date", ""))
-    excel_filename = generate_filename(file_date, emp_name, "xlsx")
-    pdf_filename = generate_filename(file_date, emp_name, "pdf")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.download_button(
-            label="📥 Download Excel",
-            data=excel_data,
-            file_name=excel_filename,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-    with col2:
-        st.download_button(
-            label="📄 Download PDF",
-            data=pdf_data,
-            file_name=pdf_filename,
-            mime="application/pdf",
-            use_container_width=True
-        )
 
 # ============= CONFETTI =============
 def confetti():
@@ -1126,7 +1075,7 @@ if "last_config" not in st.session_state:
     st.session_state.last_config = {}
 
 # ---- Main area ----
-left_col, right_col = st.columns([0.5, 0.5], gap="small")
+left_col, right_col = st.columns([0.4, 0.6], gap="small")
 
 with left_col:
     st.markdown("### ✍️ Inputs")
@@ -1148,98 +1097,26 @@ with left_col:
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
     report_date = st.date_input("📅 Date", value=datetime.now())
 
-    st.markdown("### 🕒 Task per Time Slot")
-    st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
+    st.markdown("### 📝 Task Summary")
+    st.caption("Describe your tasks for the day. You can use '10:00-11:00: task' to pin tasks to specific slots, or just list them.")
 
-    # Get time slots
-    time_slots_full = get_time_slots(lunch_hour)
-    time_slots_short = get_time_slots_short(lunch_hour)
-    lunch_index = lunch_hour - 10  # because 10am is index 0
+    user_tasks = st.text_area(
+        "",
+        height=200,
+        placeholder="e.g., 10:00-11:00: posted stories\n11:00-12:00: -\n12:00-1:00: started reel editing\n2:00-3:00: created AI images\n...",
+        key="free_task_input"
+    )
 
-    # Store user inputs in session state (individual slot tasks)
-    if "slot_tasks" not in st.session_state:
-        st.session_state.slot_tasks = {slot: "" for slot in time_slots_full if slot != time_slots_full[lunch_index]}
-
-    # Display each slot as a glossy card with a text input
-    for i, full_slot in enumerate(time_slots_full):
-        if i == lunch_index:
-            # Lunch slot – display as disabled card
-            st.markdown(f"""
-            <div class="slot-card lunch-card" style="display: flex; align-items: center; padding: 0.3rem 0.6rem;">
-                <span class="slot-label">🍴 {full_slot}</span>
-                <span style="flex:1; text-align:center; color: #ffc107;">Lunch Break</span>
-            </div>
-            """, unsafe_allow_html=True)
-            continue
-
-        short_time = time_slots_short[i]
-        current_val = st.session_state.slot_tasks.get(full_slot, "")
-        col_label, col_input = st.columns([0.4, 0.6])
-        with col_label:
-            st.markdown(f"<span class='slot-label'>{short_time}</span>", unsafe_allow_html=True)
-        with col_input:
-            new_val = st.text_input(
-                label="",
-                value=current_val,
-                key=f"slot_{i}",
-                placeholder="e.g., posted stories",
-                label_visibility="collapsed"
-            )
-            st.session_state.slot_tasks[full_slot] = new_val
-
-    # Build the full task summary string for the AI (combine all slot tasks)
-    task_lines = []
-    for full_slot in time_slots_full:
-        if full_slot == time_slots_full[lunch_index]:
-            continue
-        short_time = time_slots_short[time_slots_full.index(full_slot)]
-        task = st.session_state.slot_tasks.get(full_slot, "").strip()
-        if task:
-            task_lines.append(f"{short_time}: {task}")
-        else:
-            task_lines.append(f"{short_time}: ")
-    task_summary = "\n".join(task_lines)
-    st.session_state.task_summary = task_summary
-
-    # Quick templates (fill slots)
     templates_quick = {
-        "Feng Shui & Content": {
-            "10:00-11:00": "Posted Feng Shui stories",
-            "11:00-12:00": "Created post on July animal signs",
-            "12:00-13:00": "Started editing Kedarnath reel",
-            "14:00-15:00": "Created 15 AI creatives for reel",
-            "15:00-16:00": "Continued editing reel",
-            "16:00-17:00": "Reviewed performance",
-            "17:00-18:00": "Planned next steps"
-        },
-        "Meetings & Documentation": {
-            "10:00-11:00": "Team sync meeting",
-            "11:00-12:00": "Wrote meeting notes",
-            "12:00-13:00": "Follow-up emails",
-            "14:00-15:00": "Project planning",
-            "15:00-16:00": "Client call",
-            "16:00-17:00": "Prepared status report",
-            "17:00-18:00": "Reviewed and finalized"
-        },
-        "Development & Testing": {
-            "10:00-11:00": "Fixed bugs",
-            "11:00-12:00": "Developed new feature",
-            "12:00-13:00": "Code review",
-            "14:00-15:00": "Wrote tests",
-            "15:00-16:00": "Deployed to staging",
-            "16:00-17:00": "Updated documentation",
-            "17:00-18:00": "Sprint planning"
-        },
-        "Custom": {}
+        "Feng Shui & Content": "10:00-11:00: Posted Feng Shui stories\n11:00-12:00: Created post on July animal signs\n12:00-13:00: Started editing Kedarnath reel\n14:00-15:00: Created 15 AI creatives for reel\n15:00-16:00: Continued editing reel\n16:00-17:00: Reviewed performance\n17:00-18:00: Planned next steps",
+        "Meetings & Documentation": "10:00-11:00: Team sync meeting\n11:00-12:00: Wrote meeting notes\n12:00-13:00: Follow-up emails\n14:00-15:00: Project planning\n15:00-16:00: Client call\n16:00-17:00: Prepared status report\n17:00-18:00: Reviewed and finalized",
+        "Development & Testing": "10:00-11:00: Fixed bugs\n11:00-12:00: Developed new feature\n12:00-13:00: Code review\n14:00-15:00: Wrote tests\n15:00-16:00: Deployed to staging\n16:00-17:00: Updated documentation\n17:00-18:00: Sprint planning",
+        "Custom": ""
     }
     selected_template_quick = st.selectbox("📝 Quick template", list(templates_quick.keys()), key="quick_template")
     if selected_template_quick != "Custom" and templates_quick[selected_template_quick]:
         if st.button("📋 Load template", use_container_width=True):
-            for short, task in templates_quick[selected_template_quick].items():
-                for full_slot in time_slots_full:
-                    if time_slots_short[time_slots_full.index(full_slot)] == short:
-                        st.session_state.slot_tasks[full_slot] = task
-                        break
+            st.session_state.free_task_input = templates_quick[selected_template_quick]
             st.rerun()
 
     col_gen, col_reg = st.columns(2)
@@ -1252,18 +1129,79 @@ with left_col:
 with right_col:
     if st.session_state.loaded_report is not None:
         st.markdown("### 📂 Loaded Report")
+        # Show the loaded report (non‑editable) – you could also allow editing, but we'll use the editable table.
+        # We'll use the same data editor for loaded reports.
+        # We'll display the schedule in a data editor.
+        pass
+
+    # If we have a schedule in session state, display it as an editable table
+    if "current_schedule_df" in st.session_state:
+        st.markdown("### 📊 Edit Schedule")
+        st.caption("You can edit Activity and Description directly in the table below.")
+
+        edited_df = st.data_editor(
+            st.session_state.current_schedule_df,
+            column_config={
+                "Time Slot": st.column_config.Column("Time Slot", disabled=True),
+                "Activity": st.column_config.TextColumn("Activity"),
+                "Description": st.column_config.TextColumn("Description")
+            },
+            use_container_width=True,
+            num_rows="fixed",
+            key="schedule_editor"
+        )
+
+        # Update the session state with the edited data
+        st.session_state.current_schedule_df = edited_df
+
+        # Rebuild the schedule data structure from the edited df
+        schedule_list = []
+        for _, row in edited_df.iterrows():
+            schedule_list.append({
+                "slot": row["Time Slot"],
+                "activity": row["Activity"],
+                "description": row["Description"]
+            })
+
+        schedule_data = {
+            "employee_name": st.session_state.selected_employee_name,
+            "position": st.session_state.selected_employee_position,
+            "date": report_date.strftime("%Y-%m-%d"),
+            "schedule": schedule_list
+        }
+
+        # Update last_schedule in session state so downloads use the edited data
+        st.session_state.last_schedule = schedule_data
+
+        # Download buttons
         time_slots = get_time_slots(lunch_hour)
-        display_report(st.session_state.loaded_report, template_bytes,
-                       st.session_state.loaded_report.get("employee_name", "N/A"),
-                       time_slots)
-    elif st.session_state.last_schedule is not None:
-        st.markdown("### 📊 Generated Report")
-        time_slots = get_time_slots(lunch_hour)
-        display_report(st.session_state.last_schedule, template_bytes,
-                       st.session_state.last_schedule.get("employee_name", "N/A"),
-                       time_slots)
+        excel_data = create_excel_from_schedule(schedule_data, template_bytes, time_slots)
+        pdf_data = create_pdf_from_schedule(schedule_data, template_bytes, time_slots)
+
+        file_date = parse_date(schedule_data["date"])
+        emp_name = schedule_data["employee_name"]
+        excel_filename = generate_filename(file_date, emp_name, "xlsx")
+        pdf_filename = generate_filename(file_date, emp_name, "pdf")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(
+                label="📥 Download Excel",
+                data=excel_data,
+                file_name=excel_filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        with col2:
+            st.download_button(
+                label="📄 Download PDF",
+                data=pdf_data,
+                file_name=pdf_filename,
+                mime="application/pdf",
+                use_container_width=True
+            )
     else:
-        st.info("👈 Fill in your per‑slot tasks and click Generate.")
+        st.info("👈 Type your tasks and click Generate to create a schedule.")
 
 # ---- Generation logic ----
 if generate_clicked or regenerate_clicked:
@@ -1278,11 +1216,10 @@ if generate_clicked or regenerate_clicked:
         date_used = cfg["date"]
         lunch_hour_used = cfg.get("lunch_hour", 13)
     else:
-        tasks = st.session_state.task_summary.strip()
+        tasks = st.session_state.get("free_task_input", "").strip()
         if not tasks:
-            st.warning("Please describe your daily tasks (at least one slot).")
+            st.warning("Please describe your daily tasks.")
             st.stop()
-        # Retrieve API key from config if not provided by input
         if PROVIDERS[provider]["api_key_required"]:
             saved_key = load_config().get("api_key", "")
             if saved_key:
@@ -1328,6 +1265,12 @@ if generate_clicked or regenerate_clicked:
         emp_list = load_employees()
         if not any(e["name"] == emp_used for e in emp_list):
             add_employee(emp_used, pos_used)
+
+        # Build a DataFrame for the data editor
+        schedule_df = pd.DataFrame(data["schedule"])
+        # Rename columns to match the data editor
+        schedule_df = schedule_df.rename(columns={"slot": "Time Slot", "activity": "Activity", "description": "Description"})
+        st.session_state.current_schedule_df = schedule_df
 
         st.balloons()
         confetti()
