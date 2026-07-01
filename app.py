@@ -4,7 +4,6 @@ import re
 import os
 import time
 import shutil
-import pandas as pd
 from datetime import datetime
 import openai
 from groq import Groq
@@ -490,7 +489,7 @@ def clear_history():
     if os.path.exists(HISTORY_FILE):
         os.remove(HISTORY_FILE)
 
-# ============= JSON PARSER =============
+# ============= ROBUST JSON PARSER =============
 def extract_and_clean_json(raw_text):
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
@@ -522,15 +521,17 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION =============
+# ============= AI GENERATION (IMPROVED) =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
+    # Check API key
     if PROVIDERS[provider]["api_key_required"] and not api_key:
-        raise ValueError(f"API key for {provider} is missing. Please enter it in the sidebar.")
+        raise ValueError(f"⚠️ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
 
     slot_labels = get_time_slots(lunch_hour)
     lunch_label = slot_labels[lunch_hour - 10]
     short_to_full = create_short_to_full_map(lunch_hour)
 
+    # Detect '-' slots
     force_dash_slots = set()
     if user_tasks:
         for line in user_tasks.split('\n'):
@@ -544,10 +545,13 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
                     full_slot = short_to_full[short_time]
                     force_dash_slots.add(full_slot)
 
+    # STRONGER PROMPT to force all slots
     prompt = f"""
 You are an assistant that fills an End‑of‑Day work report.
 
-The report has these 8 hourly slots (lunch break is fixed at **{lunch_label}** – you MUST set activity="Lunch Break" and description="Lunch Break" for that slot):
+The report has exactly these 8 hourly slots (lunch break is fixed at **{lunch_label}** – you MUST set activity="Lunch Break" and description="Lunch Break" for that slot):
+
+All slots must be filled. Do not leave any slot empty.
 
 The user has provided tasks for specific time slots in the following format:
 {user_tasks}
@@ -573,6 +577,7 @@ Date: {report_date}
     timeout_seconds = 60 if provider == "Ollama (local)" else 30
     max_retries = 2
     last_error = None
+
     for attempt in range(max_retries):
         if progress_callback:
             progress_callback(30 + attempt * 20, f"Contacting AI ({provider})...")
@@ -584,7 +589,7 @@ Date: {report_date}
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.2,
-                    max_tokens=500,
+                    max_tokens=600,
                     timeout=timeout_seconds
                 )
                 raw = response.choices[0].message.content
@@ -595,7 +600,7 @@ Date: {report_date}
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.2,
-                    max_tokens=500,
+                    max_tokens=600,
                     timeout=timeout_seconds
                 )
                 raw = response.choices[0].message.content
@@ -604,7 +609,7 @@ Date: {report_date}
                 model = genai.GenerativeModel(model_name or PROVIDERS[provider]["default_model"])
                 response = model.generate_content(
                     prompt,
-                    generation_config=genai.types.GenerationConfig(temperature=0.2, max_output_tokens=500),
+                    generation_config=genai.types.GenerationConfig(temperature=0.2, max_output_tokens=600),
                     request_options={"timeout": timeout_seconds}
                 )
                 raw = response.text
@@ -619,7 +624,7 @@ Date: {report_date}
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.2,
-                    max_tokens=500,
+                    max_tokens=600,
                     timeout=timeout_seconds
                 )
                 raw = response.choices[0].message.content
@@ -646,6 +651,7 @@ Date: {report_date}
     else:
         raise RuntimeError(f"Failed after {max_retries} attempts. Last error: {last_error}")
 
+    # Build complete schedule
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
@@ -659,11 +665,17 @@ Date: {report_date}
                 entry["activity"] = "-"
                 entry["description"] = "-"
             else:
+                # Ensure we have values
                 entry["activity"] = entry.get("activity", "No specific task")
                 entry["description"] = entry.get("description", "No description provided.")
             complete_schedule.append(entry)
         else:
-            complete_schedule.append({"slot": slot, "activity": "No specific task", "description": "No description provided."})
+            # Slot not in AI response – fill with a default (but this should not happen if AI works)
+            complete_schedule.append({
+                "slot": slot,
+                "activity": "No specific task",
+                "description": "No description provided."
+            })
     data["schedule"] = complete_schedule
     data["employee_name"] = data.get("employee_name", employee_name)
     data["position"] = data.get("position", position)
@@ -1100,6 +1112,7 @@ with left_col:
 
     st.markdown("### 📝 Task Summary")
     st.caption("Describe your tasks for the day. You can use '10:00-11:00: task' to pin tasks to specific slots, or just list them.")
+    st.caption("⚠️ **If you see 'No specific task' after generation, check that you've entered a valid API key in the sidebar.**")
 
     if "free_task_input" not in st.session_state:
         st.session_state.free_task_input = ""
@@ -1230,7 +1243,7 @@ if generate_clicked or regenerate_clicked:
             else:
                 api_key = ""
             if not api_key:
-                st.warning("Please enter your API key in the sidebar config.")
+                st.warning("⚠️ API key is missing. Please enter it in the sidebar under Config → API Key.")
                 st.stop()
         else:
             api_key = None
