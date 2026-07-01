@@ -670,7 +670,7 @@ Date: {report_date}
     data["date"] = data.get("date", report_date)
     return data
 
-# ============= EXCEL GENERATION (now accepts a schedule list) =============
+# ============= EXCEL GENERATION =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -740,7 +740,6 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
     safe_write('C4', schedule_data.get("position", DEFAULT_POSITION))
     safe_write('C5', schedule_data.get("date", datetime.now().strftime("%Y-%m-%d")))
 
-    # Use the schedule list from the data
     schedule_list = schedule_data.get("schedule", [])
     start_row = 8
     for idx, slot in enumerate(time_slots):
@@ -1073,6 +1072,8 @@ if "last_input" not in st.session_state:
     st.session_state.last_input = ""
 if "last_config" not in st.session_state:
     st.session_state.last_config = {}
+if "current_schedule" not in st.session_state:
+    st.session_state.current_schedule = None
 
 # ---- Main area ----
 left_col, right_col = st.columns([0.4, 0.6], gap="small")
@@ -1100,8 +1101,12 @@ with left_col:
     st.markdown("### 📝 Task Summary")
     st.caption("Describe your tasks for the day. You can use '10:00-11:00: task' to pin tasks to specific slots, or just list them.")
 
+    if "free_task_input" not in st.session_state:
+        st.session_state.free_task_input = ""
+
     user_tasks = st.text_area(
         "",
+        value=st.session_state.free_task_input,
         height=200,
         placeholder="e.g., 10:00-11:00: posted stories\n11:00-12:00: -\n12:00-1:00: started reel editing\n2:00-3:00: created AI images\n...",
         key="free_task_input"
@@ -1127,50 +1132,48 @@ with left_col:
                                        disabled=st.session_state.last_schedule is None)
 
 with right_col:
-    if st.session_state.loaded_report is not None:
-        st.markdown("### 📂 Loaded Report")
-        # Show the loaded report (non‑editable) – you could also allow editing, but we'll use the editable table.
-        # We'll use the same data editor for loaded reports.
-        # We'll display the schedule in a data editor.
-        pass
-
-    # If we have a schedule in session state, display it as an editable table
-    if "current_schedule_df" in st.session_state:
+    # Editable schedule using text_inputs
+    if st.session_state.current_schedule is not None:
         st.markdown("### 📊 Edit Schedule")
-        st.caption("You can edit Activity and Description directly in the table below.")
+        st.caption("You can edit Activity and Description directly below.")
 
-        edited_df = st.data_editor(
-            st.session_state.current_schedule_df,
-            column_config={
-                "Time Slot": st.column_config.Column("Time Slot", disabled=True),
-                "Activity": st.column_config.TextColumn("Activity"),
-                "Description": st.column_config.TextColumn("Description")
-            },
-            use_container_width=True,
-            num_rows="fixed",
-            key="schedule_editor"
-        )
+        schedule_list = st.session_state.current_schedule
+        edited_schedule = []
 
-        # Update the session state with the edited data
-        st.session_state.current_schedule_df = edited_df
-
-        # Rebuild the schedule data structure from the edited df
-        schedule_list = []
-        for _, row in edited_df.iterrows():
-            schedule_list.append({
-                "slot": row["Time Slot"],
-                "activity": row["Activity"],
-                "description": row["Description"]
+        for idx, entry in enumerate(schedule_list):
+            cols = st.columns([2, 2, 3])  # Time Slot, Activity, Description
+            with cols[0]:
+                st.markdown(f"**{entry['slot']}**")
+            with cols[1]:
+                new_activity = st.text_input(
+                    "Activity",
+                    value=entry["activity"],
+                    key=f"edit_act_{idx}",
+                    label_visibility="collapsed"
+                )
+            with cols[2]:
+                new_description = st.text_input(
+                    "Description",
+                    value=entry["description"],
+                    key=f"edit_desc_{idx}",
+                    label_visibility="collapsed"
+                )
+            edited_schedule.append({
+                "slot": entry["slot"],
+                "activity": new_activity,
+                "description": new_description
             })
 
+        # Update session state with edits
+        st.session_state.current_schedule = edited_schedule
+
+        # Build schedule data for download
         schedule_data = {
             "employee_name": st.session_state.selected_employee_name,
             "position": st.session_state.selected_employee_position,
             "date": report_date.strftime("%Y-%m-%d"),
-            "schedule": schedule_list
+            "schedule": edited_schedule
         }
-
-        # Update last_schedule in session state so downloads use the edited data
         st.session_state.last_schedule = schedule_data
 
         # Download buttons
@@ -1216,7 +1219,7 @@ if generate_clicked or regenerate_clicked:
         date_used = cfg["date"]
         lunch_hour_used = cfg.get("lunch_hour", 13)
     else:
-        tasks = st.session_state.get("free_task_input", "").strip()
+        tasks = st.session_state.free_task_input.strip()
         if not tasks:
             st.warning("Please describe your daily tasks.")
             st.stop()
@@ -1266,11 +1269,8 @@ if generate_clicked or regenerate_clicked:
         if not any(e["name"] == emp_used for e in emp_list):
             add_employee(emp_used, pos_used)
 
-        # Build a DataFrame for the data editor
-        schedule_df = pd.DataFrame(data["schedule"])
-        # Rename columns to match the data editor
-        schedule_df = schedule_df.rename(columns={"slot": "Time Slot", "activity": "Activity", "description": "Description"})
-        st.session_state.current_schedule_df = schedule_df
+        # Store the schedule in session state for editing
+        st.session_state.current_schedule = data["schedule"]
 
         st.balloons()
         confetti()
