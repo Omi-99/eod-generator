@@ -56,7 +56,6 @@ def parse_date(date_str):
 
 # ================= DYNAMIC TIME SLOTS =================
 def get_time_slots(lunch_hour):
-    """Return full time slot labels (e.g., '10:00 am to 11:00 am')."""
     slots = []
     for h in range(10, 18):
         start = h
@@ -77,7 +76,6 @@ def get_time_slots(lunch_hour):
     return slots
 
 def get_time_slots_short(lunch_hour):
-    """Return short format for task summary (e.g., '10:00-11:00')."""
     slots = []
     for h in range(10, 18):
         start = h
