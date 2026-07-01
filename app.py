@@ -101,8 +101,114 @@ def create_short_to_full_map(lunch_hour):
     full = get_time_slots(lunch_hour)
     return dict(zip(short, full))
 
-# ================= DYNAMIC CSS (same as before) =================
-# (full CSS code – I’ll include it in the final file)
+# ================= DYNAMIC CSS =================
+theme = st.session_state.theme
+bg_primary = "#0f0f1a" if theme == "dark" else "#f0f2f6"
+bg_secondary = "rgba(20,20,40,0.85)" if theme == "dark" else "rgba(255,255,255,0.85)"
+text_color = "#ffffff" if theme == "dark" else "#000000"
+card_bg = "rgba(30,30,50,0.6)" if theme == "dark" else "rgba(255,255,255,0.7)"
+border_color = "rgba(255,255,255,0.15)" if theme == "dark" else "rgba(0,0,0,0.1)"
+shadow_color = "rgba(0,0,0,0.3)" if theme == "dark" else "rgba(0,0,0,0.1)"
+header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+preview_bg = "rgba(255,255,255,0.08)" if theme == "dark" else "white"
+preview_border = "#444" if theme == "dark" else "#ddd"
+table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
+table_text = "#ffffff" if theme == "dark" else "#000000"
+table_border = "#555" if theme == "dark" else "#ddd"
+
+# Custom CSS for glossy cards
+st.markdown(f"""
+<style>
+    .block-container {{
+        padding: 0.6rem 0.8rem 0.3rem 0.8rem !important;
+        max-width: 100% !important;
+    }}
+    .main-header {{
+        background: {header_grad};
+        background-size: 200% 200%;
+        animation: gradientMove 6s ease infinite;
+        padding: 0.5rem 0.6rem;
+        border-radius: 12px;
+        color: white;
+        text-align: center;
+        margin-bottom: 0.4rem;
+        margin-top: 0.4rem;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    }}
+    @keyframes gradientMove {{
+        0% {{ background-position: 0% 50%; }}
+        50% {{ background-position: 100% 50%; }}
+        100% {{ background-position: 0% 50%; }}
+    }}
+    .main-header h1 {{
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.3;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }}
+    .main-header p {{
+        font-size: 0.75rem;
+        opacity: 0.9;
+        margin: 0;
+        line-height: 1.3;
+    }}
+    .glass-card {{
+        background: {card_bg};
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 12px;
+        padding: 0.4rem 0.6rem;
+        margin-bottom: 0.4rem;
+        box-shadow: 0 4px 20px {shadow_color};
+        border: 1px solid {border_color};
+        transition: all 0.3s ease;
+        animation: fadeInUp 0.6s ease;
+    }}
+    .glass-card:hover {{
+        transform: translateY(-3px);
+        box-shadow: 0 8px 30px {shadow_color};
+    }}
+    @keyframes fadeInUp {{
+        0% {{ opacity: 0; transform: translateY(20px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
+    .slot-card {{
+        background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border-radius: 10px;
+        padding: 0.3rem 0.6rem;
+        margin-bottom: 0.3rem;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }}
+    .slot-card:hover {{
+        transform: scale(1.01);
+        box-shadow: 0 6px 20px rgba(102,126,234,0.3);
+    }}
+    .slot-label {{
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: {text_color};
+        display: inline-block;
+        min-width: 100px;
+    }}
+    .slot-input {{
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        border-radius: 6px !important;
+        color: {text_color} !important;
+        padding: 0.2rem 0.5rem !important;
+        width: 100% !important;
+    }}
+    .lunch-card {{
+        background: linear-gradient(135deg, rgba(255,193,7,0.2), rgba(255,152,0,0.2));
+        border: 1px solid rgba(255,193,7,0.3);
+    }}
+</style>
+""", unsafe_allow_html=True)
 
 # ================= CONFIG =================
 CONFIG_FILE = ".eod_config.json"
@@ -180,13 +286,18 @@ def save_json_file(filepath, data):
 def load_config():
     return load_json_file(CONFIG_FILE, {})
 
-def save_config(provider, model, api_key):
-    save_json_file(CONFIG_FILE, {"provider": provider, "model": model, "api_key": api_key})
+def save_config(provider, model, api_key=None):
+    # Save provider, model, and api_key (if provided)
+    data = {"provider": provider, "model": model}
+    if api_key is not None:
+        data["api_key"] = api_key
+    save_json_file(CONFIG_FILE, data)
 
 def clear_config():
     if os.path.exists(CONFIG_FILE):
         os.remove(CONFIG_FILE)
 
+# ============= EMPLOYEE & HISTORY (unchanged) =============
 def load_employees():
     return load_json_file(EMPLOYEES_FILE, [])
 
@@ -227,7 +338,7 @@ def clear_history():
     if os.path.exists(HISTORY_FILE):
         os.remove(HISTORY_FILE)
 
-# ============= ROBUST JSON PARSER =============
+# ============= JSON PARSER =============
 def extract_and_clean_json(raw_text):
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
@@ -692,7 +803,7 @@ st.markdown("""
 config = load_config()
 saved_provider = config.get("provider", "Groq (Fastest)")
 saved_model = config.get("model", "")
-saved_api_key = config.get("api_key", "")
+saved_api_key = config.get("api_key", "")  # might be empty
 
 # ---- Sidebar ----
 with st.sidebar:
@@ -714,10 +825,26 @@ with st.sidebar:
         provider = st.selectbox("AI Provider", options=list(PROVIDERS.keys()),
                                 index=list(PROVIDERS.keys()).index(saved_provider) if saved_provider in PROVIDERS else 0)
         if PROVIDERS[provider]["api_key_required"]:
-            api_key = st.text_input("API Key", type="password",
-                                    value=saved_api_key if saved_provider == provider else "")
-            if "Groq" in provider:
-                st.caption("Get free key at [console.groq.com](https://console.groq.com)")
+            # Check if API key is already saved
+            if saved_api_key:
+                # Key is set – don't display the input, show a status message and a change button
+                st.success("✅ API key is set")
+                if st.button("🔄 Change API Key"):
+                    # Clear the saved key in config
+                    save_config(provider, model_name, "")  # remove key
+                    st.rerun()
+            else:
+                # No key saved – show input
+                api_key = st.text_input("API Key", type="password", key="api_key_input")
+                if st.button("💾 Save API Key"):
+                    if api_key:
+                        save_config(provider, model_name, api_key)
+                        st.success("✅ API key saved")
+                        st.rerun()
+                    else:
+                        st.warning("Please enter an API key")
+                if "Groq" in provider:
+                    st.caption("Get free key at [console.groq.com](https://console.groq.com)")
         else:
             api_key = None
             st.info("Ollama – no key needed.")
@@ -725,22 +852,21 @@ with st.sidebar:
                                    placeholder=PROVIDERS[provider]["default_model"],
                                    value=saved_model if saved_provider == provider else "")
 
+        # Save provider and model changes (without overwriting key if already set)
         if 'prev_provider' not in st.session_state:
             st.session_state.prev_provider = provider
             st.session_state.prev_model = model_name
-            st.session_state.prev_api_key = api_key
 
         if (provider != st.session_state.prev_provider or
-            model_name != st.session_state.prev_model or
-            api_key != st.session_state.prev_api_key):
-            if not PROVIDERS[provider]["api_key_required"] or (api_key and api_key.strip()):
-                save_config(provider, model_name, api_key or "")
-                st.session_state.prev_provider = provider
-                st.session_state.prev_model = model_name
-                st.session_state.prev_api_key = api_key
-                st.success("✅ Saved")
+            model_name != st.session_state.prev_model):
+            # Only save provider/model, keep existing key if any
+            current_key = saved_api_key if saved_api_key else ""
+            save_config(provider, model_name, current_key)
+            st.session_state.prev_provider = provider
+            st.session_state.prev_model = model_name
+            st.success("✅ Config saved")
 
-        if st.button("🗑️ Clear config"):
+        if st.button("🗑️ Clear all config (including API key)"):
             clear_config()
             st.success("Config cleared.")
             st.rerun()
@@ -853,7 +979,7 @@ if "last_config" not in st.session_state:
     st.session_state.last_config = {}
 
 # ---- Main area ----
-left_col, right_col = st.columns([0.4, 0.6], gap="small")
+left_col, right_col = st.columns([0.5, 0.5], gap="small")
 
 with left_col:
     st.markdown("### ✍️ Inputs")
@@ -875,36 +1001,60 @@ with left_col:
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
     report_date = st.date_input("📅 Date", value=datetime.now())
 
-    # ---- Task summary with pre-filled time slots ----
-    st.markdown("### 📝 Task per Time Slot")
+    st.markdown("### 🕒 Task per Time Slot")
     st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
 
-    # Get time slots based on current lunch hour
+    # Get time slots
+    time_slots_full = get_time_slots(lunch_hour)
     time_slots_short = get_time_slots_short(lunch_hour)
     lunch_index = lunch_hour - 10  # because 10am is index 0
 
-    # Build the lines for the task summary
-    expected_lines = []
-    for i, short_time in enumerate(time_slots_short):
+    # Store user inputs in session state (individual slot tasks)
+    if "slot_tasks" not in st.session_state:
+        st.session_state.slot_tasks = {slot: "" for slot in time_slots_full if slot != time_slots_full[lunch_index]}
+
+    # Display each slot as a glossy card with a text input
+    for i, full_slot in enumerate(time_slots_full):
         if i == lunch_index:
+            # Lunch slot – display as disabled card
+            st.markdown(f"""
+            <div class="slot-card lunch-card" style="display: flex; align-items: center; padding: 0.3rem 0.6rem;">
+                <span class="slot-label">🍴 {full_slot}</span>
+                <span style="flex:1; text-align:center; color: #ffc107;">Lunch Break</span>
+            </div>
+            """, unsafe_allow_html=True)
             continue
-        expected_lines.append(f"{short_time}: ")
 
-    # Check if the current session state task_summary exists and matches the expected pattern
-    current_text = st.session_state.get("task_summary", "")
-    # If current_text is empty or does not contain the first expected time slot, rebuild
-    if not current_text.strip() or expected_lines[0].split(":")[0] not in current_text:
-        st.session_state.task_summary = "\n".join(expected_lines)
+        short_time = time_slots_short[i]
+        current_val = st.session_state.slot_tasks.get(full_slot, "")
+        col_label, col_input = st.columns([0.4, 0.6])
+        with col_label:
+            st.markdown(f"<span class='slot-label'>{short_time}</span>", unsafe_allow_html=True)
+        with col_input:
+            new_val = st.text_input(
+                label="",
+                value=current_val,
+                key=f"slot_{i}",
+                placeholder="e.g., posted stories",
+                label_visibility="collapsed"
+            )
+            st.session_state.slot_tasks[full_slot] = new_val
 
-    task_summary = st.text_area(
-        "",
-        value=st.session_state.task_summary,
-        height=300,
-        key="task_summary_area",
-        help="Type your task after each time slot. Example: 10:00-11:00: posted stories"
-    )
+    # Build the full task summary string for the AI (combine all slot tasks)
+    task_lines = []
+    for full_slot in time_slots_full:
+        if full_slot == time_slots_full[lunch_index]:
+            continue
+        short_time = time_slots_short[time_slots_full.index(full_slot)]
+        task = st.session_state.slot_tasks.get(full_slot, "").strip()
+        if task:
+            task_lines.append(f"{short_time}: {task}")
+        else:
+            task_lines.append(f"{short_time}: ")
+    task_summary = "\n".join(task_lines)
+    st.session_state.task_summary = task_summary
 
-    # Quick templates
+    # Quick templates (fill slots)
     templates_quick = {
         "Feng Shui & Content": {
             "10:00-11:00": "Posted Feng Shui stories",
@@ -938,19 +1088,12 @@ with left_col:
     selected_template_quick = st.selectbox("📝 Quick template", list(templates_quick.keys()), key="quick_template")
     if selected_template_quick != "Custom" and templates_quick[selected_template_quick]:
         if st.button("📋 Load template", use_container_width=True):
-            lines = []
-            for short_time in time_slots_short:
-                if short_time == "13:00-14:00":
-                    continue
-                if short_time in templates_quick[selected_template_quick]:
-                    lines.append(f"{short_time}: {templates_quick[selected_template_quick][short_time]}")
-                else:
-                    lines.append(f"{short_time}: ")
-            st.session_state.task_summary = "\n".join(lines)
+            for short, task in templates_quick[selected_template_quick].items():
+                for full_slot in time_slots_full:
+                    if time_slots_short[time_slots_full.index(full_slot)] == short:
+                        st.session_state.slot_tasks[full_slot] = task
+                        break
             st.rerun()
-
-    # Store the updated value back to session state (so it persists across reruns)
-    st.session_state.task_summary = task_summary
 
     col_gen, col_reg = st.columns(2)
     with col_gen:
@@ -973,7 +1116,7 @@ with right_col:
                        st.session_state.last_schedule.get("employee_name", "N/A"),
                        time_slots)
     else:
-        st.info("👈 Type your tasks per time slot and click Generate.")
+        st.info("👈 Fill in your per‑slot tasks and click Generate.")
 
 # ---- Generation logic ----
 if generate_clicked or regenerate_clicked:
@@ -990,11 +1133,24 @@ if generate_clicked or regenerate_clicked:
     else:
         tasks = st.session_state.task_summary.strip()
         if not tasks:
-            st.warning("Please describe your daily tasks first.")
+            st.warning("Please describe your daily tasks (at least one slot).")
             st.stop()
-        if PROVIDERS[provider]["api_key_required"] and not api_key:
-            st.warning(f"Please enter your {provider} API key.")
-            st.stop()
+        # Retrieve API key from config if not provided by input
+        if PROVIDERS[provider]["api_key_required"]:
+            # Use saved key if available, else use the input (if shown) or warn
+            saved_key = load_config().get("api_key", "")
+            if saved_key:
+                api_key = saved_key
+            else:
+                # If no saved key, the input must have been shown; but we might have hidden it.
+                # We'll try to get from session state or fallback to input.
+                # Since we might not have the input field, we'll check config again.
+                api_key = ""  # will be caught by the next check
+            if not api_key:
+                st.warning("Please enter your API key in the sidebar config.")
+                st.stop()
+        else:
+            api_key = None
         emp_used = st.session_state.selected_employee_name
         pos_used = st.session_state.selected_employee_position
         date_used = report_date.strftime("%Y-%m-%d")
