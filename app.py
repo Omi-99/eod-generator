@@ -489,7 +489,7 @@ def clear_history():
     if os.path.exists(HISTORY_FILE):
         os.remove(HISTORY_FILE)
 
-# ============= ROBUST JSON PARSER =============
+# ============= JSON PARSER =============
 def extract_and_clean_json(raw_text):
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
@@ -522,30 +522,14 @@ def extract_and_clean_json(raw_text):
     raise ValueError("Could not parse JSON")
 
 # ============= AI GENERATION =============
-def generate_schedule(slot_tasks, additional_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
+def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
     if PROVIDERS[provider]["api_key_required"] and not api_key:
-        raise ValueError(f"API key for {provider} is missing. Please enter it in the sidebar.")
+        raise ValueError(f"⚠️ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
 
     slot_labels = get_time_slots(lunch_hour)
     lunch_label = slot_labels[lunch_hour - 10]
     short_to_full = create_short_to_full_map(lunch_hour)
 
-    # Build user tasks string: include per-slot tasks and additional free-text
-    user_lines = []
-    for full_slot in slot_labels:
-        if full_slot == lunch_label:
-            continue
-        short_time = get_time_slots_short(lunch_hour)[slot_labels.index(full_slot)]
-        task = slot_tasks.get(full_slot, "").strip()
-        if task:
-            user_lines.append(f"{short_time}: {task}")
-        else:
-            user_lines.append(f"{short_time}: ")
-    if additional_tasks:
-        user_lines.append("\nAdditional tasks: " + additional_tasks)
-    user_tasks = "\n".join(user_lines)
-
-    # Detect '-' slots
     force_dash_slots = set()
     if user_tasks:
         for line in user_tasks.split('\n'):
@@ -566,12 +550,12 @@ The report has exactly these 8 hourly slots (lunch break is fixed at **{lunch_la
 
 All slots must be filled. Do not leave any slot empty.
 
-The user has provided tasks for specific time slots:
+The user has provided tasks for specific time slots in the following format:
 {user_tasks}
 
 Instructions:
-- For each slot, if the user provided a task, use that as the activity title and write a professional description (1‑2 sentences).
-- If the user wrote "-" for a slot, set both activity and description to "-".
+- If the user wrote a task for a slot (e.g., "10:00-11:00: posted stories"), use that as the activity title and write a professional description (1‑2 sentences).
+- If the user wrote "-" for a slot (e.g., "11:00-12:00: -"), set both activity and description to "-".
 - If a slot is not mentioned, distribute the remaining tasks intelligently or fill with appropriate activities.
 - For the lunch slot, always use activity="Lunch Break" and description="Lunch Break".
 
@@ -664,7 +648,6 @@ Date: {report_date}
     else:
         raise RuntimeError(f"Failed after {max_retries} attempts. Last error: {last_error}")
 
-    # Build complete schedule
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
@@ -1097,11 +1080,9 @@ if "last_config" not in st.session_state:
     st.session_state.last_config = {}
 if "current_schedule" not in st.session_state:
     st.session_state.current_schedule = None
-if "slot_tasks" not in st.session_state:
-    st.session_state.slot_tasks = {}
 
 # ---- Main area ----
-left_col, right_col = st.columns([0.5, 0.5], gap="small")
+left_col, right_col = st.columns([0.4, 0.6], gap="small")
 
 with left_col:
     st.markdown("### ✍️ Inputs")
@@ -1123,16 +1104,16 @@ with left_col:
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
     report_date = st.date_input("📅 Date", value=datetime.now())
 
-    st.markdown("### 🕒 Task per Time Slot")
+    st.markdown("### 📝 Task per Time Slot")
     st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
 
     # Get time slots
     time_slots_full = get_time_slots(lunch_hour)
     time_slots_short = get_time_slots_short(lunch_hour)
-    lunch_index = lunch_hour - 10  # because 10am is index 0
+    lunch_index = lunch_hour - 10
 
-    # Rebuild slot_tasks if lunch hour changed or first load
-    if not st.session_state.slot_tasks or list(st.session_state.slot_tasks.keys()) != time_slots_full:
+    # Store user inputs in session state (individual slot tasks)
+    if "slot_tasks" not in st.session_state:
         st.session_state.slot_tasks = {slot: "" for slot in time_slots_full if slot != time_slots_full[lunch_index]}
 
     # Display each slot as a glossy card with a text input
@@ -1162,17 +1143,21 @@ with left_col:
             )
             st.session_state.slot_tasks[full_slot] = new_val
 
-    # Additional free-text area
-    st.markdown("### 📝 Additional Tasks (Optional)")
-    st.caption("Any extra tasks not assigned to a specific slot?")
-    additional_tasks = st.text_area(
-        "",
-        height=80,
-        placeholder="e.g., answered emails, reviewed reports...",
-        key="additional_tasks"
-    )
+    # Build the full task summary string for the AI (combine all slot tasks)
+    task_lines = []
+    for full_slot in time_slots_full:
+        if full_slot == time_slots_full[lunch_index]:
+            continue
+        short_time = time_slots_short[time_slots_full.index(full_slot)]
+        task = st.session_state.slot_tasks.get(full_slot, "").strip()
+        if task:
+            task_lines.append(f"{short_time}: {task}")
+        else:
+            task_lines.append(f"{short_time}: ")
+    task_summary = "\n".join(task_lines)
+    st.session_state.task_summary = task_summary
 
-    # Quick templates (fill per-slot tasks)
+    # Quick templates (fill slots)
     templates_quick = {
         "Feng Shui & Content": {
             "10:00-11:00": "Posted Feng Shui stories",
@@ -1207,7 +1192,6 @@ with left_col:
     if selected_template_quick != "Custom" and templates_quick[selected_template_quick]:
         if st.button("📋 Load template", use_container_width=True):
             for short, task in templates_quick[selected_template_quick].items():
-                # Find the full slot that matches this short time
                 for full_slot in time_slots_full:
                     if time_slots_short[time_slots_full.index(full_slot)] == short:
                         st.session_state.slot_tasks[full_slot] = task
@@ -1294,7 +1278,7 @@ with right_col:
                 use_container_width=True
             )
     else:
-        st.info("👈 Fill in your per‑slot tasks and click Generate to create a schedule.")
+        st.info("👈 Fill in your per‑slot tasks and click Generate.")
 
 # ---- Generation logic ----
 if generate_clicked or regenerate_clicked:
@@ -1308,14 +1292,11 @@ if generate_clicked or regenerate_clicked:
         pos_used = cfg["position"]
         date_used = cfg["date"]
         lunch_hour_used = cfg.get("lunch_hour", 13)
-        slot_tasks = cfg.get("slot_tasks", {})
-        additional_tasks = cfg.get("additional_tasks", "")
     else:
-        # Get slot tasks from session state
-        slot_tasks = st.session_state.slot_tasks
-        additional_tasks = st.session_state.get("additional_tasks", "").strip()
-        if not any(slot_tasks.values()) and not additional_tasks:
-            st.warning("Please enter at least one task in a time slot or add additional tasks.")
+        # Get the task summary built from slot inputs
+        tasks = st.session_state.task_summary.strip()
+        if not tasks:
+            st.warning("Please describe your daily tasks (at least one slot).")
             st.stop()
         if PROVIDERS[provider]["api_key_required"]:
             saved_key = load_config().get("api_key", "")
@@ -1332,7 +1313,7 @@ if generate_clicked or regenerate_clicked:
         pos_used = st.session_state.selected_employee_position
         date_used = report_date.strftime("%Y-%m-%d")
         lunch_hour_used = lunch_hour
-        st.session_state.last_input = ""
+        st.session_state.last_input = tasks
         st.session_state.last_config = {
             "provider": provider,
             "api_key": api_key,
@@ -1340,9 +1321,7 @@ if generate_clicked or regenerate_clicked:
             "employee": emp_used,
             "position": pos_used,
             "date": date_used,
-            "lunch_hour": lunch_hour_used,
-            "slot_tasks": slot_tasks,
-            "additional_tasks": additional_tasks
+            "lunch_hour": lunch_hour_used
         }
         provider_used = provider
         api_key_used = api_key
@@ -1356,13 +1335,7 @@ if generate_clicked or regenerate_clicked:
 
     try:
         update_progress(10, "🚀 Initializing...")
-        data = generate_schedule(
-            slot_tasks, additional_tasks,
-            emp_used, pos_used, date_used,
-            provider_used, api_key_used, model_used,
-            lunch_hour_used,
-            progress_callback=update_progress
-        )
+        data = generate_schedule(tasks, emp_used, pos_used, date_used, provider_used, api_key_used, model_used, lunch_hour_used, progress_callback=update_progress)
         update_progress(95, "✨ Finalizing...")
 
         st.session_state.last_schedule = data
