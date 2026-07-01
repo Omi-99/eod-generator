@@ -652,6 +652,7 @@ Date: {report_date}
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
     complete_schedule = []
+
     for slot in slot_labels:
         if slot == lunch_label:
             complete_schedule.append({"slot": slot, "activity": "Lunch Break", "description": "Lunch Break"})
@@ -665,18 +666,23 @@ Date: {report_date}
                 entry["description"] = entry.get("description", "No description provided.")
             complete_schedule.append(entry)
         else:
-            complete_schedule.append({
-                "slot": slot,
-                "activity": "No specific task",
-                "description": "No description provided."
-            })
+            # Slot not in AI response – use default or dash if forced
+            if slot in force_dash_slots:
+                complete_schedule.append({"slot": slot, "activity": "-", "description": "-"})
+            else:
+                complete_schedule.append({
+                    "slot": slot,
+                    "activity": "No specific task",
+                    "description": "No description provided."
+                })
+
     data["schedule"] = complete_schedule
     data["employee_name"] = data.get("employee_name", employee_name)
     data["position"] = data.get("position", position)
     data["date"] = data.get("date", report_date)
     return data
 
-# ============= EXCEL GENERATION =============
+# ============= EXCEL GENERATION (unchanged) =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -761,7 +767,7 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
     output.seek(0)
     return output
 
-# ============= PDF GENERATION =============
+# ============= PDF GENERATION (unchanged) =============
 def create_pdf_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -1293,7 +1299,6 @@ if generate_clicked or regenerate_clicked:
         date_used = cfg["date"]
         lunch_hour_used = cfg.get("lunch_hour", 13)
     else:
-        # Get the task summary built from slot inputs
         tasks = st.session_state.task_summary.strip()
         if not tasks:
             st.warning("Please describe your daily tasks (at least one slot).")
