@@ -100,6 +100,11 @@ def create_short_to_full_map(lunch_hour):
     full = get_time_slots(lunch_hour)
     return dict(zip(short, full))
 
+def get_full_to_short_map(lunch_hour):
+    """Reverse mapping: full slot label -> short slot label."""
+    short_to_full = create_short_to_full_map(lunch_hour)
+    return {v: k for k, v in short_to_full.items()}
+
 # ================= REBUILD SCHEDULE FOR LUNCH CHANGE =================
 def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
     if not old_schedule:
@@ -565,7 +570,7 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION =============
+# ============= AI GENERATION (UPDATED) =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"⚠️ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
@@ -573,19 +578,28 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
     slot_labels = get_time_slots(lunch_hour)
     lunch_label = slot_labels[lunch_hour - 10]
     short_to_full = create_short_to_full_map(lunch_hour)
+    full_to_short = get_full_to_short_map(lunch_hour)
 
+    # --- Parse user tasks into a structured mapping (short slot -> task) ---
+    task_mapping = {}
     force_dash_slots = set()
-    if user_tasks:
-        for line in user_tasks.split('\n'):
-            line = line.strip()
-            if not line:
-                continue
-            match = re.match(r'^(\d{2}:\d{2}-\d{2}:\d{2})\s*:\s*-\s*$', line)
-            if match:
-                short_time = match.group(1)
-                if short_time in short_to_full:
-                    full_slot = short_to_full[short_time]
-                    force_dash_slots.add(full_slot)
+    for line in user_tasks.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        # Expecting "10:00-11:00 : task" or "10:00-11:00: -"
+        match = re.match(r'^(\d{2}:\d{2}-\d{2}:\d{2})\s*:\s*(.*)$', line)
+        if match:
+            short_time, task = match.groups()
+            task = task.strip()
+            # Store task
+            task_mapping[short_time] = task
+            # If user explicitly put "-", we'll force that later
+            if task == "-":
+                force_dash_slots.add(short_time)
+
+    # Build structured JSON for the AI prompt
+    structured_tasks_json = json.dumps(task_mapping, indent=2)
 
     prompt = f"""
 You are an assistant that fills an End‑of‑Day work report.
@@ -594,13 +608,13 @@ The report has exactly these 8 hourly slots (lunch break is fixed at **{lunch_la
 
 All slots must be filled. Do not leave any slot empty.
 
-The user has provided tasks for specific time slots in the following format:
-{user_tasks}
+The user has provided the following tasks for specific time slots (JSON mapping of short slot → task):
+{structured_tasks_json}
 
 Instructions:
-- If the user wrote a task for a slot (e.g., "10:00-11:00: posted stories"), use that as the activity title and write a professional description (1‑2 sentences).
-- If the user wrote "-" for a slot (e.g., "11:00-12:00: -"), set both activity and description to "-".
-- If a slot is not mentioned, distribute the remaining tasks intelligently or fill with appropriate activities.
+- For each slot, use the provided task if it exists in the mapping.
+- If the task is "-", set both activity and description to "-".
+- If a slot is not present in the mapping, distribute remaining tasks intelligently or fill with appropriate activities.
 - For the lunch slot, always use activity="Lunch Break" and description="Lunch Break".
 
 Return **only** a valid JSON object with:
@@ -618,7 +632,9 @@ Date: {report_date}
     timeout_seconds = 60 if provider == "Ollama (local)" else 30
     max_retries = 2
     last_error = None
+    raw = None
 
+    # ---- AI call ----
     for attempt in range(max_retries):
         if progress_callback:
             progress_callback(30 + attempt * 20, f"Contacting AI ({provider})...")
@@ -672,12 +688,14 @@ Date: {report_date}
             else:
                 raise ValueError("Unsupported provider")
 
+            # Try to parse JSON
             try:
                 data = extract_and_clean_json(raw)
                 break
             except Exception as parse_error:
                 last_error = f"JSON parsing error: {parse_error}"
                 if attempt == max_retries - 1:
+                    # Fall back to user-defined schedule
                     raise RuntimeError(f"Could not parse AI response: {raw[:300]}...\nError: {parse_error}")
                 else:
                     time.sleep(1)
@@ -685,6 +703,7 @@ Date: {report_date}
         except Exception as e:
             last_error = str(e)
             if attempt == max_retries - 1:
+                # Fall back to user-defined schedule
                 raise RuntimeError(f"AI request failed: {e}")
             else:
                 time.sleep(2)
@@ -692,29 +711,57 @@ Date: {report_date}
     else:
         raise RuntimeError(f"Failed after {max_retries} attempts. Last error: {last_error}")
 
+    # ---- Post-process: ensure all slots exist and override with user tasks ----
     if "schedule" not in data or not isinstance(data["schedule"], list):
         data["schedule"] = []
     schedule_dict = {entry.get("slot", "").strip(): entry for entry in data["schedule"] if "slot" in entry}
     complete_schedule = []
 
-    for slot in slot_labels:
-        if slot == lunch_label:
-            complete_schedule.append({"slot": slot, "activity": "Lunch Break", "description": "Lunch Break"})
-        elif slot in schedule_dict:
-            entry = schedule_dict[slot]
-            if slot in force_dash_slots:
-                entry["activity"] = "-"
-                entry["description"] = "-"
+    for slot_label in slot_labels:
+        if slot_label == lunch_label:
+            complete_schedule.append({"slot": slot_label, "activity": "Lunch Break", "description": "Lunch Break"})
+            continue
+
+        # Get the short key for this slot
+        short_key = full_to_short.get(slot_label, "")
+        user_task = task_mapping.get(short_key, "")
+
+        # If user provided a task (including "-"), use it directly
+        if user_task:
+            if user_task == "-":
+                complete_schedule.append({
+                    "slot": slot_label,
+                    "activity": "-",
+                    "description": "-"
+                })
             else:
-                entry["activity"] = entry.get("activity", "No specific task")
-                entry["description"] = entry.get("description", "No description provided.")
-            complete_schedule.append(entry)
+                # Use user's task as activity; optionally keep AI description or generate a simple one
+                # Try to get AI description if available, else use a generic one
+                if slot_label in schedule_dict:
+                    ai_desc = schedule_dict[slot_label].get("description", "")
+                else:
+                    ai_desc = ""
+                # If AI didn't provide a description, create a simple one
+                if not ai_desc or ai_desc == "No description provided.":
+                    ai_desc = f"Task: {user_task}"
+                complete_schedule.append({
+                    "slot": slot_label,
+                    "activity": user_task,
+                    "description": ai_desc
+                })
         else:
-            if slot in force_dash_slots:
-                complete_schedule.append({"slot": slot, "activity": "-", "description": "-"})
+            # User didn't specify this slot – use AI-generated content (or fallback)
+            if slot_label in schedule_dict:
+                entry = schedule_dict[slot_label]
+                # Ensure we don't carry over lunch break if it's not lunch slot
+                complete_schedule.append({
+                    "slot": slot_label,
+                    "activity": entry.get("activity", "No specific task"),
+                    "description": entry.get("description", "No description provided.")
+                })
             else:
                 complete_schedule.append({
-                    "slot": slot,
+                    "slot": slot_label,
                     "activity": "No specific task",
                     "description": "No description provided."
                 })
