@@ -648,16 +648,15 @@ Date: {report_date}
 
             ai_schedule = parsed["schedule"]
 
-            # If we have exactly 8 entries, use index-based mapping (most reliable)
+            # If we have exactly 8 entries, use index-based mapping
             if len(ai_schedule) == len(slot_labels):
-                # Replace slot labels with our expected ones in order
                 for i, entry in enumerate(ai_schedule):
                     entry["slot"] = slot_labels[i]
                 parsed["schedule"] = ai_schedule
                 data = parsed
                 break
             else:
-                # Fallback: try to match by hour (if count differs)
+                # Fallback: match by hour
                 hour_to_entry = {}
                 for entry in ai_schedule:
                     if "slot" not in entry:
@@ -671,7 +670,6 @@ Date: {report_date}
                         elif match.group(2) == 'am' and hour == 12:
                             hour = 0
                         hour_to_entry[hour] = entry
-                # Build expected order
                 complete_schedule = []
                 missing = []
                 for expected_slot in slot_labels:
@@ -697,14 +695,14 @@ Date: {report_date}
         except Exception as e:
             last_error = str(e)
             if attempt == 1:
-                raise RuntimeError(f"AI generation failed after 2 attempts.\nLast error: {last_error}\n\nRaw AI response:\n{raw_response[:1000] if raw_response else 'No response'}")
+                raise RuntimeError(f"AI generation failed after 2 attempts.\nLast error: {last_error}")
             else:
                 continue
 
     if data is None:
         raise RuntimeError("Unexpected error: data is None")
 
-    # Post-process: use AI's activity (short) and description; but if user_task == "-", set both to "-".
+    # Post-process: use AI's activity (short) and description
     schedule_dict = {entry["slot"]: entry for entry in data["schedule"]}
     final_schedule = []
     for slot_label in slot_labels:
@@ -716,19 +714,15 @@ Date: {report_date}
             if slot_label in schedule_dict:
                 ai_entry = schedule_dict[slot_label]
                 if user_task == "-":
-                    # User explicitly typed "-" – override both
                     final_schedule.append({
                         "slot": slot_label,
                         "activity": "-",
                         "description": "-"
                     })
                 else:
-                    # Use AI-generated activity and description
                     activity = ai_entry.get("activity", "")
                     description = ai_entry.get("description", "")
-                    # If AI didn't produce a short activity, create one from user task
                     if not activity or activity == "No specific task":
-                        # Truncate user task to first 5 words
                         words = user_task.split() if user_task else []
                         activity = " ".join(words[:5]) if words else "No specific task"
                     if not description or description == "No description provided.":
@@ -739,7 +733,6 @@ Date: {report_date}
                         "description": description
                     })
             else:
-                # Fallback (should not happen)
                 if user_task == "-":
                     final_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
                 elif user_task:
@@ -753,6 +746,7 @@ Date: {report_date}
     data["employee_name"] = data.get("employee_name", employee_name)
     data["position"] = data.get("position", position)
     data["date"] = data.get("date", report_date)
+    # store raw response but not displayed
     data["_raw_response"] = raw_response
     return data
 
@@ -1350,9 +1344,7 @@ with right_col:
         }
         st.session_state.last_schedule = schedule_data
 
-        if st.session_state.raw_response:
-            with st.expander("📜 AI Raw Response (for debugging)"):
-                st.code(st.session_state.raw_response, language="json")
+        # Raw response removed from UI
 
         time_slots = get_time_slots(lunch_hour)
         excel_data = create_excel_from_schedule(schedule_data, template_bytes, time_slots)
@@ -1440,6 +1432,7 @@ if generate_clicked or regenerate_clicked:
         data = generate_schedule(tasks, emp_used, pos_used, date_used, provider_used, api_key_used, model_used, lunch_hour_used, progress_callback=update_progress)
         update_progress(95, "✨ Finalizing...")
 
+        # Store raw response but don't display
         st.session_state.raw_response = data.pop("_raw_response", None)
 
         st.session_state.last_schedule = data
@@ -1458,9 +1451,7 @@ if generate_clicked or regenerate_clicked:
         st.rerun()
     except Exception as e:
         st.error(f"❌ {e}")
-        if "raw_response" in locals() and raw_response:
-            with st.expander("📜 Raw AI Response (to help debug)"):
-                st.code(raw_response, language="json")
+        # Raw response removed from error display
         progress_bar.empty()
         status_text.empty()
         st.session_state.last_schedule = None
