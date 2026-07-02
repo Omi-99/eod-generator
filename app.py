@@ -40,6 +40,8 @@ st.session_state.setdefault("selected_employee_position", "Social Media & Digita
 st.session_state.setdefault("loaded_report", None)
 st.session_state.setdefault("loaded_date", None)
 st.session_state.setdefault("slot_tasks", {})
+st.session_state.setdefault("current_schedule", None)
+st.session_state.setdefault("last_schedule", None)
 
 def toggle_theme():
     st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
@@ -1174,19 +1176,12 @@ with st.sidebar:
     )
     if lunch_hour != st.session_state.prev_lunch_hour:
         st.session_state.prev_lunch_hour = lunch_hour
-        if "current_schedule" in st.session_state and st.session_state.current_schedule is not None:
+        if st.session_state.current_schedule is not None:
             new_schedule = rebuild_schedule_for_lunch(lunch_hour, st.session_state.current_schedule)
             if new_schedule:
                 st.session_state.current_schedule = new_schedule
-                if "last_schedule" in st.session_state and st.session_state.last_schedule is not None:
-                    old_schedule_data = st.session_state.last_schedule
-                    schedule_data = {
-                        "employee_name": old_schedule_data.get("employee_name", st.session_state.selected_employee_name),
-                        "position": old_schedule_data.get("position", st.session_state.selected_employee_position),
-                        "date": old_schedule_data.get("date", datetime.now().strftime("%d/%m/%Y")),
-                        "schedule": new_schedule
-                    }
-                    st.session_state.last_schedule = schedule_data
+                if st.session_state.last_schedule is not None:
+                    st.session_state.last_schedule["schedule"] = new_schedule
                 st.rerun()
 
     with st.expander("⚙️ Config", expanded=False):
@@ -1297,6 +1292,7 @@ with st.sidebar:
             st.session_state.current_schedule = None
             st.session_state.loaded_date = None
             st.session_state.slot_tasks = {}
+            st.session_state.last_schedule = None
             st.rerun()
 
     with st.expander("📜 History", expanded=False):
@@ -1351,11 +1347,23 @@ with st.sidebar:
         else:
             st.write("No reports yet.")
 
-# ---- Load history if present ----
+# ---- Ensure loaded report is applied on rerun ----
 if st.session_state.get("loaded_report") is not None:
     report = st.session_state.loaded_report
-    # Already set above, but ensure consistency
-    pass
+    # Already set in the click handler, but ensure consistency
+    st.session_state.selected_employee_name = report["employee_name"]
+    st.session_state.selected_employee_position = report["position"]
+    try:
+        st.session_state.loaded_date = parse_date(report["date"])
+    except:
+        st.session_state.loaded_date = datetime.now()
+    st.session_state.current_schedule = report["schedule"]
+    st.session_state.last_schedule = {
+        "employee_name": report["employee_name"],
+        "position": report["position"],
+        "date": report["date"],
+        "schedule": report["schedule"]
+    }
 
 # ---- Session state init ----
 if "loaded_report" not in st.session_state:
