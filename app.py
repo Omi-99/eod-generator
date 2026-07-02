@@ -528,7 +528,7 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION (FIXED: INDEX-BASED MATCHING) =============
+# ============= AI GENERATION (FIXED: SHORT ACTIVITY) =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"❌ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
@@ -562,9 +562,9 @@ The user has provided the following tasks for specific time slots (short slot �
 {json.dumps(task_mapping, indent=2)}
 
 Instructions:
-- For each time slot, you must use the user's provided task as the **activity** exactly as given.
+- For each time slot, you must generate a **short, concise activity title** (2‑5 words) based on the user's provided task.
+- Write a **detailed description** (1‑2 sentences) that explains what the user did.
 - If the user's task is "-", set both activity and description to "-".
-- For every other slot, write a **professional description** (1‑2 sentences) that explains what the user did.
 - If a slot has no user task, invent a reasonable activity and description.
 - For the lunch slot, always use activity="Lunch Break" and description="Lunch Break".
 
@@ -704,7 +704,7 @@ Date: {report_date}
     if data is None:
         raise RuntimeError("Unexpected error: data is None")
 
-    # Override activities with user tasks and ensure descriptions
+    # Post-process: use AI's activity (short) and description; but if user_task == "-", set both to "-".
     schedule_dict = {entry["slot"]: entry for entry in data["schedule"]}
     final_schedule = []
     for slot_label in slot_labels:
@@ -715,32 +715,37 @@ Date: {report_date}
             user_task = task_mapping.get(short_key, "")
             if slot_label in schedule_dict:
                 ai_entry = schedule_dict[slot_label]
-                if user_task:
-                    if user_task == "-":
-                        activity = "-"
-                        description = "-"
-                    else:
-                        activity = user_task
-                        description = ai_entry.get("description", "")
-                        if not description or description == "No description provided.":
-                            description = f"Worked on: {user_task}"
+                if user_task == "-":
+                    # User explicitly typed "-" – override both
+                    final_schedule.append({
+                        "slot": slot_label,
+                        "activity": "-",
+                        "description": "-"
+                    })
                 else:
-                    activity = ai_entry.get("activity", "No specific task")
-                    description = ai_entry.get("description", "No description provided.")
-                    if description == "No description provided.":
-                        description = f"Worked on: {activity}"
-                final_schedule.append({
-                    "slot": slot_label,
-                    "activity": activity,
-                    "description": description
-                })
+                    # Use AI-generated activity and description
+                    activity = ai_entry.get("activity", "")
+                    description = ai_entry.get("description", "")
+                    # If AI didn't produce a short activity, create one from user task
+                    if not activity or activity == "No specific task":
+                        # Truncate user task to first 5 words
+                        words = user_task.split() if user_task else []
+                        activity = " ".join(words[:5]) if words else "No specific task"
+                    if not description or description == "No description provided.":
+                        description = f"Worked on: {user_task}" if user_task else "No description provided."
+                    final_schedule.append({
+                        "slot": slot_label,
+                        "activity": activity,
+                        "description": description
+                    })
             else:
-                # Should never happen
-                if user_task:
-                    if user_task == "-":
-                        final_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
-                    else:
-                        final_schedule.append({"slot": slot_label, "activity": user_task, "description": f"Task: {user_task}"})
+                # Fallback (should not happen)
+                if user_task == "-":
+                    final_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
+                elif user_task:
+                    words = user_task.split()
+                    activity = " ".join(words[:5]) if words else "No specific task"
+                    final_schedule.append({"slot": slot_label, "activity": activity, "description": f"Task: {user_task}"})
                 else:
                     final_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
 
@@ -1453,7 +1458,6 @@ if generate_clicked or regenerate_clicked:
         st.rerun()
     except Exception as e:
         st.error(f"❌ {e}")
-        # Show raw response if available
         if "raw_response" in locals() and raw_response:
             with st.expander("📜 Raw AI Response (to help debug)"):
                 st.code(raw_response, language="json")
