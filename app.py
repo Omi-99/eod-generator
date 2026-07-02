@@ -528,7 +528,7 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION (FIXED: HOUR-BASED MATCHING) =============
+# ============= AI GENERATION (FIXED: INDEX-BASED MATCHING) =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"❌ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
@@ -537,18 +537,6 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
     lunch_label = slot_labels[lunch_hour - 10]
     short_to_full = create_short_to_full_map(lunch_hour)
     full_to_short = get_full_to_short_map(lunch_hour)
-
-    # Build mapping from start hour to expected slot label
-    hour_to_expected = {}
-    for slot in slot_labels:
-        match = re.match(r'(\d{1,2}):00 (am|pm)', slot.split(' to ')[0])
-        if match:
-            hour = int(match.group(1))
-            if match.group(2) == 'pm' and hour != 12:
-                hour += 12
-            elif match.group(2) == 'am' and hour == 12:
-                hour = 0
-            hour_to_expected[hour] = slot
 
     task_mapping = {}
     if user_tasks:
@@ -584,7 +572,7 @@ Return **only** a valid JSON object with:
 - "employee_name" (use the provided name)
 - "position" (use the provided position)
 - "date" (use the provided date)
-- "schedule": an array of objects with keys "slot", "activity", "description". Include exactly the above 8 slots.
+- "schedule": an array of objects with keys "slot", "activity", "description". Include exactly the above 8 slots in the correct order.
 
 Use double quotes for all keys and string values. No trailing commas. Do not include any text outside the JSON.
 
@@ -658,43 +646,58 @@ Date: {report_date}
             if "schedule" not in parsed or not isinstance(parsed["schedule"], list):
                 raise ValueError("No 'schedule' array in response")
 
-            # Build mapping from hour to AI entry
-            hour_to_entry = {}
-            for entry in parsed["schedule"]:
-                if "slot" not in entry:
-                    continue
-                slot_label = entry["slot"]
-                match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
-                if match:
-                    hour = int(match.group(1))
-                    if match.group(2) == 'pm' and hour != 12:
-                        hour += 12
-                    elif match.group(2) == 'am' and hour == 12:
-                        hour = 0
-                    hour_to_entry[hour] = entry
+            ai_schedule = parsed["schedule"]
 
-            # Build complete schedule by matching hours
-            complete_schedule = []
-            missing_hours = []
-            for hour, expected_slot in hour_to_expected.items():
-                if hour in hour_to_entry:
-                    entry = hour_to_entry[hour]
-                    entry["slot"] = expected_slot  # use our exact label
-                    complete_schedule.append(entry)
-                else:
-                    missing_hours.append(hour)
-
-            if missing_hours:
-                raise ValueError(f"Missing slots for hours: {missing_hours}")
-
-            parsed["schedule"] = complete_schedule
-            data = parsed
-            break
+            # If we have exactly 8 entries, use index-based mapping (most reliable)
+            if len(ai_schedule) == len(slot_labels):
+                # Replace slot labels with our expected ones in order
+                for i, entry in enumerate(ai_schedule):
+                    entry["slot"] = slot_labels[i]
+                parsed["schedule"] = ai_schedule
+                data = parsed
+                break
+            else:
+                # Fallback: try to match by hour (if count differs)
+                hour_to_entry = {}
+                for entry in ai_schedule:
+                    if "slot" not in entry:
+                        continue
+                    slot_label = entry["slot"]
+                    match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
+                    if match:
+                        hour = int(match.group(1))
+                        if match.group(2) == 'pm' and hour != 12:
+                            hour += 12
+                        elif match.group(2) == 'am' and hour == 12:
+                            hour = 0
+                        hour_to_entry[hour] = entry
+                # Build expected order
+                complete_schedule = []
+                missing = []
+                for expected_slot in slot_labels:
+                    match = re.match(r'(\d{1,2}):00 (am|pm)', expected_slot.split(' to ')[0])
+                    if match:
+                        hour = int(match.group(1))
+                        if match.group(2) == 'pm' and hour != 12:
+                            hour += 12
+                        elif match.group(2) == 'am' and hour == 12:
+                            hour = 0
+                        if hour in hour_to_entry:
+                            entry = hour_to_entry[hour]
+                            entry["slot"] = expected_slot
+                            complete_schedule.append(entry)
+                        else:
+                            missing.append(hour)
+                if missing:
+                    raise ValueError(f"Missing slots for hours: {missing}")
+                parsed["schedule"] = complete_schedule
+                data = parsed
+                break
 
         except Exception as e:
             last_error = str(e)
             if attempt == 1:
-                raise RuntimeError(f"AI generation failed after 2 attempts.\nLast error: {last_error}")
+                raise RuntimeError(f"AI generation failed after 2 attempts.\nLast error: {last_error}\n\nRaw AI response:\n{raw_response[:1000] if raw_response else 'No response'}")
             else:
                 continue
 
@@ -732,7 +735,7 @@ Date: {report_date}
                     "description": description
                 })
             else:
-                # Should never happen now
+                # Should never happen
                 if user_task:
                     if user_task == "-":
                         final_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
@@ -1020,7 +1023,7 @@ with st.sidebar:
                     st.session_state.last_schedule = schedule_data
                 st.rerun()
 
-    # ========== FIXED CONFIG SECTION ==========
+    # ========== CONFIG SECTION ==========
     with st.expander("⚙️ Config", expanded=False):
         provider = st.selectbox(
             "AI Provider",
@@ -1450,6 +1453,7 @@ if generate_clicked or regenerate_clicked:
         st.rerun()
     except Exception as e:
         st.error(f"❌ {e}")
+        # Show raw response if available
         if "raw_response" in locals() and raw_response:
             with st.expander("📜 Raw AI Response (to help debug)"):
                 st.code(raw_response, language="json")
