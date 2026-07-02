@@ -56,7 +56,7 @@ table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
 table_text = "#ffffff" if theme == "dark" else "#000000"
 table_border = "#555" if theme == "dark" else "#ddd"
 
-# ================= PROFESSIONAL CSS (FIXED) =================
+# ================= COMPACT, ANIMATED, PROFESSIONAL CSS =================
 st.markdown(f"""
 <style>
     /* ---------- GLOBAL ---------- */
@@ -66,7 +66,7 @@ st.markdown(f"""
         padding: 0;
     }}
     .block-container {{
-        padding: 0.6rem 0.8rem 0.4rem 0.8rem !important;
+        padding: 0.3rem 0.5rem 0.2rem 0.5rem !important;
         max-width: 1200px !important;
         margin: 0 auto !important;
     }}
@@ -76,17 +76,17 @@ st.markdown(f"""
         transition: background 0.5s ease, color 0.3s ease;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
-    /* ---------- HEADER ---------- */
+    /* ---------- HEADER WITH ANIMATION ---------- */
     .main-header {{
         background: {header_grad};
         background-size: 300% 300%;
-        animation: gradientFlow 8s ease infinite;
-        padding: 0.6rem 1.2rem;
+        animation: gradientFlow 8s ease infinite, fadeInUp 0.8s ease;
+        padding: 0.8rem 1.2rem;
         border-radius: 20px;
         color: white;
         text-align: center;
-        margin-bottom: 0.6rem;
-        margin-top: 0.4rem;
+        margin-bottom: 0.8rem;
+        margin-top: 1.2rem;
         box-shadow: 0 8px 40px rgba(102, 126, 234, 0.4);
         border: 1px solid rgba(255,255,255,0.15);
         backdrop-filter: blur(4px);
@@ -104,6 +104,10 @@ st.markdown(f"""
         pointer-events: none;
         animation: shine 10s linear infinite;
     }}
+    @keyframes fadeInUp {{
+        0% {{ opacity: 0; transform: translateY(30px); }}
+        100% {{ opacity: 1; transform: translateY(0); }}
+    }}
     @keyframes shine {{
         0% {{ transform: translateX(-100%) rotate(20deg); }}
         100% {{ transform: translateX(100%) rotate(20deg); }}
@@ -114,7 +118,7 @@ st.markdown(f"""
         100% {{ background-position: 0% 50%; }}
     }}
     .main-header h1 {{
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 700;
         letter-spacing: -0.5px;
         margin: 0;
@@ -124,7 +128,7 @@ st.markdown(f"""
         z-index: 2;
     }}
     .main-header p {{
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         opacity: 0.9;
         margin: 0.1rem 0 0 0;
         font-weight: 300;
@@ -135,47 +139,47 @@ st.markdown(f"""
     /* ---------- CARDS ---------- */
     .glass-card {{
         background: {card_bg};
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border-radius: 16px;
-        padding: 0.5rem 0.8rem;
-        margin-bottom: 0.4rem;
-        box-shadow: 0 8px 32px {shadow_color};
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: 12px;
+        padding: 0.3rem 0.6rem;
+        margin-bottom: 0.3rem;
+        box-shadow: 0 4px 20px {shadow_color};
         border: 1px solid {border_color};
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }}
     .glass-card:hover {{
-        transform: translateY(-3px);
-        box-shadow: 0 12px 48px {shadow_color};
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px {shadow_color};
     }}
     /* ---------- SLOT CARDS ---------- */
     .slot-card {{
         background: linear-gradient(135deg, rgba(102,126,234,0.12), rgba(118,75,162,0.12));
-        backdrop-filter: blur(8px);
-        -webkit-backdrop-filter: blur(8px);
-        border-radius: 12px;
-        padding: 0.2rem 0.5rem;
-        margin-bottom: 0.2rem;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        border-radius: 10px;
+        padding: 0.15rem 0.4rem;
+        margin-bottom: 0.15rem;
         border: 1px solid {border_color};
-        box-shadow: 0 4px 16px {shadow_color};
-        transition: all 0.3s ease;
+        box-shadow: 0 2px 10px {shadow_color};
+        transition: all 0.2s ease;
         color: {text_color};
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 4px;
     }}
     .slot-card:hover {{
-        transform: scale(1.01);
-        box-shadow: 0 6px 24px rgba(102,126,234,0.25);
+        transform: scale(1.005);
+        box-shadow: 0 4px 16px rgba(102,126,234,0.2);
         border-color: rgba(102,126,234,0.4);
     }}
     .slot-label {{
         font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.75rem;
         color: {text_color};
-        min-width: 85px;
-        margin-right: 6px;
+        min-width: 75px;
+        margin-right: 4px;
         letter-spacing: 0.2px;
     }}
     .lunch-card {{
@@ -185,17 +189,17 @@ st.markdown(f"""
     }}
     /* ---------- BUTTONS ---------- */
     .stButton button {{
-        padding: 0.5rem 0.8rem !important;
-        font-size: 0.9rem !important;
-        border-radius: 12px !important;
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 10px !important;
         transition: all 0.3s ease !important;
         background: {header_grad} !important;
         background-size: 200% 200% !important;
         color: white !important;
         border: none !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4) !important;
-        min-height: 48px !important;
+        box-shadow: 0 2px 12px rgba(102, 126, 234, 0.3) !important;
+        min-height: 40px !important;
         width: 100% !important;
         touch-action: manipulation !important;
         letter-spacing: 0.3px;
@@ -203,64 +207,64 @@ st.markdown(f"""
         overflow: hidden;
     }}
     .stButton button:hover {{
-        transform: scale(1.03);
-        box-shadow: 0 8px 32px rgba(102, 126, 234, 0.6) !important;
+        transform: scale(1.02);
+        box-shadow: 0 6px 24px rgba(102, 126, 234, 0.5) !important;
         background-position: 100% 50% !important;
     }}
     .stButton button:active {{
         transform: scale(0.97);
     }}
     .stDownloadButton button {{
-        padding: 0.5rem 0.8rem !important;
-        font-size: 0.9rem !important;
-        border-radius: 12px !important;
+        padding: 0.3rem 0.6rem !important;
+        font-size: 0.85rem !important;
+        border-radius: 10px !important;
         transition: all 0.3s ease !important;
         background: #28a745 !important;
         color: white !important;
         border: none !important;
         font-weight: 600 !important;
-        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.4) !important;
-        min-height: 48px !important;
+        box-shadow: 0 2px 12px rgba(40, 167, 69, 0.3) !important;
+        min-height: 40px !important;
         width: 100% !important;
         touch-action: manipulation !important;
         letter-spacing: 0.3px;
     }}
     .stDownloadButton button:hover {{
-        transform: scale(1.03);
-        box-shadow: 0 8px 32px rgba(40, 167, 69, 0.6) !important;
+        transform: scale(1.02);
+        box-shadow: 0 6px 24px rgba(40, 167, 69, 0.5) !important;
     }}
     .stDownloadButton button:nth-of-type(2) {{
         background: #dc3545 !important;
-        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.4) !important;
+        box-shadow: 0 2px 12px rgba(220, 53, 69, 0.3) !important;
     }}
     .stDownloadButton button:nth-of-type(2):hover {{
-        box-shadow: 0 8px 32px rgba(220, 53, 69, 0.6) !important;
+        box-shadow: 0 6px 24px rgba(220, 53, 69, 0.5) !important;
     }}
     /* ---------- SIDEBAR ---------- */
     .css-1d391kg {{
         background: {bg_secondary} !important;
-        backdrop-filter: blur(20px) !important;
-        -webkit-backdrop-filter: blur(20px) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
         color: {text_color} !important;
-        padding: 0.3rem 0.4rem !important;
+        padding: 0.2rem 0.3rem !important;
         border-right: 1px solid {border_color} !important;
-        box-shadow: 4px 0 40px {shadow_color} !important;
+        box-shadow: 4px 0 30px {shadow_color} !important;
         transition: all 0.3s ease;
     }}
     .css-1d391kg * {{
-        font-size: 0.85rem !important;
+        font-size: 0.8rem !important;
         color: {text_color} !important;
     }}
     .css-1d391kg .stSelectbox select,
     .css-1d391kg .stTextInput input,
     .css-1d391kg .stDateInput input {{
-        background: rgba(60, 60, 90, 0.4) !important;
+        background: rgba(60, 60, 90, 0.3) !important;
         color: {text_color} !important;
         border: 1px solid {border_color} !important;
-        border-radius: 10px !important;
-        font-size: 0.85rem !important;
-        padding: 0.4rem 0.6rem !important;
-        height: 44px !important;
+        border-radius: 8px !important;
+        font-size: 0.8rem !important;
+        padding: 0.3rem 0.5rem !important;
+        height: 36px !important;
         backdrop-filter: blur(4px) !important;
         width: 100% !important;
         transition: border 0.3s ease;
@@ -274,14 +278,14 @@ st.markdown(f"""
     .css-1d391kg .stButton button {{
         background: rgba(108, 99, 255, 0.7) !important;
         color: white !important;
-        font-size: 0.8rem !important;
-        padding: 0.3rem 0.6rem !important;
-        height: 40px !important;
+        font-size: 0.75rem !important;
+        padding: 0.2rem 0.5rem !important;
+        height: 34px !important;
         border: 1px solid {border_color} !important;
-        border-radius: 10px !important;
+        border-radius: 8px !important;
         backdrop-filter: blur(4px) !important;
-        box-shadow: 0 2px 12px rgba(0,0,0,0.2) !important;
-        min-height: 40px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+        min-height: 34px !important;
         transition: all 0.3s ease;
     }}
     .css-1d391kg .stButton button:hover {{
@@ -290,81 +294,81 @@ st.markdown(f"""
     }}
     /* ---------- INPUTS ---------- */
     .stTextInput input, .stDateInput input, .stSelectbox select {{
-        background: rgba(60, 60, 90, 0.3) !important;
+        background: rgba(60, 60, 90, 0.25) !important;
         color: {text_color} !important;
         border: 1px solid {border_color} !important;
-        border-radius: 12px !important;
-        font-size: 0.9rem !important;
-        padding: 0.5rem 0.7rem !important;
-        height: 48px !important;
+        border-radius: 10px !important;
+        font-size: 0.85rem !important;
+        padding: 0.3rem 0.6rem !important;
+        height: 40px !important;
         backdrop-filter: blur(4px) !important;
         width: 100% !important;
         transition: border 0.3s ease, box-shadow 0.3s ease;
     }}
     .stTextInput input:focus, .stDateInput input:focus, .stSelectbox select:focus {{
         border-color: #6C63FF !important;
-        box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.15) !important;
+        box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.12) !important;
     }}
     /* ---------- PREVIEW TABLE ---------- */
     .preview-table {{
         width: 100%;
         border-collapse: collapse;
         margin-top: 4px;
-        font-size: 12px;
+        font-size: 11px;
         color: {table_text};
-        border-radius: 12px;
+        border-radius: 10px;
         overflow: hidden;
-        box-shadow: 0 4px 16px {shadow_color};
+        box-shadow: 0 2px 12px {shadow_color};
     }}
     .preview-table th {{
         background-color: {table_header_bg};
         font-weight: 600;
         border: 1px solid {table_border};
-        padding: 6px 10px;
+        padding: 4px 8px;
         text-align: left;
         color: {text_color};
         letter-spacing: 0.3px;
     }}
     .preview-table td {{
         border: 1px solid {table_border};
-        padding: 6px 10px;
+        padding: 4px 8px;
         text-align: left;
         background: {preview_bg};
     }}
     .preview-table tr:hover td {{
         background: rgba(108, 99, 255, 0.05);
     }}
-    /* ---------- MOBILE RESPONSIVE ---------- */
+    /* ---------- COMPACT MOBILE ---------- */
     @media (max-width: 768px) {{
         .block-container {{
-            padding: 0.3rem 0.4rem 0.2rem 0.4rem !important;
+            padding: 0.2rem 0.3rem 0.1rem 0.3rem !important;
         }}
-        .main-header h1 {{ font-size: 1.3rem !important; }}
-        .main-header p {{ font-size: 0.7rem !important; }}
+        .main-header h1 {{ font-size: 1.2rem !important; }}
+        .main-header p {{ font-size: 0.65rem !important; }}
         .stButton button, .stDownloadButton button {{
-            font-size: 0.9rem !important;
-            padding: 0.5rem 0.4rem !important;
-            min-height: 52px !important;
+            font-size: 0.85rem !important;
+            padding: 0.4rem 0.3rem !important;
+            min-height: 44px !important;
         }}
         .slot-label {{
-            font-size: 0.75rem !important;
-            min-width: 70px !important;
+            font-size: 0.7rem !important;
+            min-width: 60px !important;
         }}
         .slot-card {{
-            padding: 0.2rem 0.4rem !important;
-            margin-bottom: 0.15rem !important;
+            padding: 0.15rem 0.3rem !important;
+            margin-bottom: 0.1rem !important;
         }}
         .stTextInput input, .stDateInput input, .stSelectbox select {{
             font-size: 16px !important;
-            height: 48px !important;
-            padding: 0.4rem 0.5rem !important;
+            height: 44px !important;
+            padding: 0.3rem 0.4rem !important;
         }}
         .css-1d391kg {{
             padding: 0.1rem 0.2rem !important;
-            min-width: 260px !important;
+            min-width: 220px !important;
         }}
         .css-1d391kg * {{
-            font-size: 0.75rem !important;
+            font-size: 0.7rem !important;
         }}
         .stColumns {{
             flex-direction: column !important;
@@ -373,27 +377,27 @@ st.markdown(f"""
             font-size: 10px !important;
         }}
         .preview-table th, .preview-table td {{
-            padding: 4px 6px !important;
+            padding: 3px 5px !important;
         }}
     }}
     @media (max-width: 480px) {{
-        .main-header h1 {{ font-size: 1.1rem !important; }}
-        .main-header p {{ font-size: 0.65rem !important; }}
+        .main-header h1 {{ font-size: 1rem !important; }}
+        .main-header p {{ font-size: 0.6rem !important; }}
         .slot-label {{
-            font-size: 0.7rem !important;
-            min-width: 60px !important;
+            font-size: 0.65rem !important;
+            min-width: 55px !important;
         }}
         .preview-table {{
             font-size: 9px !important;
         }}
         .preview-table th, .preview-table td {{
-            padding: 3px 4px !important;
+            padding: 2px 4px !important;
         }}
     }}
 </style>
 """, unsafe_allow_html=True)
 
-# ================= NEW PROFESSIONAL HEADER =================
+# ================= HEADER WITH ANIMATION =================
 st.markdown("""
 <div class="main-header">
     <h1>✨ EOD Report Generator</h1>
@@ -405,6 +409,14 @@ st.markdown("""
 def parse_date(date_str):
     if not date_str:
         return datetime.now().date()
+    # Try dd/mm/yyyy first
+    match = re.search(r'(\d{2})/(\d{2})/(\d{4})', date_str)
+    if match:
+        try:
+            return datetime.strptime(match.group(0), "%d/%m/%Y").date()
+        except ValueError:
+            pass
+    # Fallback to yyyy-mm-dd
     match = re.search(r'(\d{4}-\d{2}-\d{2})', date_str)
     if match:
         try:
@@ -657,7 +669,7 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION (SHORT ACTIVITY) =============
+# ============= AI GENERATION =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"❌ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
@@ -874,8 +886,8 @@ Date: {report_date}
     data["schedule"] = final_schedule
     data["employee_name"] = data.get("employee_name", employee_name)
     data["position"] = data.get("position", position)
+    # Format date as dd/mm/yyyy
     data["date"] = data.get("date", report_date)
-    # store raw response but not displayed
     data["_raw_response"] = raw_response
     return data
 
@@ -903,7 +915,17 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
             ws['B4'] = "Position"
             ws['C4'] = schedule_data.get("position", DEFAULT_POSITION)
             ws['B5'] = "Date"
-            ws['C5'] = schedule_data.get("date", datetime.now().strftime("%Y-%m-%d"))
+            # Format date as dd/mm/yyyy
+            date_val = schedule_data.get("date")
+            if isinstance(date_val, str):
+                try:
+                    # if it's already a string, parse it to date then format
+                    dt = parse_date(date_val)
+                    ws['C5'] = dt.strftime("%d/%m/%Y")
+                except:
+                    ws['C5'] = date_val
+            else:
+                ws['C5'] = date_val.strftime("%d/%m/%Y") if isinstance(date_val, datetime) else date_val
             for r in [3,4,5]:
                 ws[f'B{r}'].font = Font(bold=True)
             ws['B7'] = "Time"
@@ -947,7 +969,16 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
 
     safe_write('C3', schedule_data.get("employee_name", DEFAULT_EMPLOYEE))
     safe_write('C4', schedule_data.get("position", DEFAULT_POSITION))
-    safe_write('C5', schedule_data.get("date", datetime.now().strftime("%Y-%m-%d")))
+    # Format date
+    date_val = schedule_data.get("date")
+    if isinstance(date_val, str):
+        try:
+            dt = parse_date(date_val)
+            safe_write('C5', dt.strftime("%d/%m/%Y"))
+        except:
+            safe_write('C5', date_val)
+    else:
+        safe_write('C5', date_val.strftime("%d/%m/%Y") if isinstance(date_val, datetime) else date_val)
 
     schedule_list = schedule_data.get("schedule", [])
     start_row = 8
@@ -1030,6 +1061,17 @@ def create_fallback_pdf(schedule_data, time_slots=None):
         ["Position", schedule_data.get("position", "N/A")],
         ["Date", schedule_data.get("date", "N/A")]
     ]
+    # Format date in PDF
+    date_val = schedule_data.get("date")
+    if isinstance(date_val, str):
+        try:
+            dt = parse_date(date_val)
+            detail_data[2][1] = dt.strftime("%d/%m/%Y")
+        except:
+            detail_data[2][1] = date_val
+    elif isinstance(date_val, datetime):
+        detail_data[2][1] = date_val.strftime("%d/%m/%Y")
+
     detail_table = Table(detail_data, colWidths=[2.0*inch, 5.5*inch])
     detail_table.setStyle(TableStyle([
         ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
@@ -1138,7 +1180,7 @@ with st.sidebar:
                     schedule_data = {
                         "employee_name": old_schedule_data.get("employee_name", st.session_state.selected_employee_name),
                         "position": old_schedule_data.get("position", st.session_state.selected_employee_position),
-                        "date": old_schedule_data.get("date", datetime.now().strftime("%Y-%m-%d")),
+                        "date": old_schedule_data.get("date", datetime.now().strftime("%d/%m/%Y")),
                         "schedule": new_schedule
                     }
                     st.session_state.last_schedule = schedule_data
@@ -1327,7 +1369,8 @@ with left_col:
         st.session_state.selected_employee_position = DEFAULT_POSITION
 
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
-    report_date = st.date_input("📅 Date", value=datetime.now())
+    # Date input with dd/mm/yyyy format display
+    report_date = st.date_input("📅 Date", value=datetime.now(), format="DD/MM/YYYY")
 
     st.markdown("### 📝 Task per Time Slot")
     st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
@@ -1342,7 +1385,7 @@ with left_col:
     for i, full_slot in enumerate(time_slots_full):
         if i == lunch_index:
             st.markdown(f"""
-            <div class="slot-card lunch-card" style="display: flex; align-items: center; padding: 0.3rem 0.6rem;">
+            <div class="slot-card lunch-card" style="display: flex; align-items: center; padding: 0.2rem 0.5rem;">
                 <span class="slot-label">🍴 {full_slot}</span>
                 <span style="flex:1; text-align:center; color: #ffc107;">Lunch Break</span>
             </div>
@@ -1351,7 +1394,7 @@ with left_col:
 
         short_time = time_slots_short[i]
         current_val = st.session_state.slot_tasks.get(full_slot, "")
-        col_label, col_input = st.columns([0.35, 0.65])
+        col_label, col_input = st.columns([0.3, 0.7])
         with col_label:
             st.markdown(f"<span class='slot-label'>{short_time}</span>", unsafe_allow_html=True)
         with col_input:
@@ -1458,15 +1501,14 @@ with right_col:
 
         st.session_state.current_schedule = edited_schedule
 
+        # Use dd/mm/yyyy format for date in schedule data
         schedule_data = {
             "employee_name": st.session_state.selected_employee_name,
             "position": st.session_state.selected_employee_position,
-            "date": report_date.strftime("%Y-%m-%d"),
+            "date": report_date.strftime("%d/%m/%Y"),
             "schedule": edited_schedule
         }
         st.session_state.last_schedule = schedule_data
-
-        # Raw response removed – no display
 
         time_slots = get_time_slots(lunch_hour)
         excel_data = create_excel_from_schedule(schedule_data, template_bytes, time_slots)
@@ -1507,7 +1549,7 @@ if generate_clicked or regenerate_clicked:
         model_used = cfg["model"]
         emp_used = cfg["employee"]
         pos_used = cfg["position"]
-        date_used = cfg["date"]
+        date_used = cfg["date"]  # already dd/mm/yyyy
         lunch_hour_used = cfg.get("lunch_hour", 13)
     else:
         tasks = st.session_state.task_summary.strip()
@@ -1526,7 +1568,7 @@ if generate_clicked or regenerate_clicked:
             
         emp_used = st.session_state.selected_employee_name
         pos_used = st.session_state.selected_employee_position
-        date_used = report_date.strftime("%Y-%m-%d")
+        date_used = report_date.strftime("%d/%m/%Y")
         lunch_hour_used = lunch_hour
         st.session_state.last_input = tasks
         st.session_state.last_config = {
