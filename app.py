@@ -103,13 +103,9 @@ def get_full_to_short_map(lunch_hour):
     short_to_full = create_short_to_full_map(lunch_hour)
     return {v: k for k, v in short_to_full.items()}
 
-# ================= NORMALIZE SLOT LABELS =================
 def normalize_slot_label(label):
-    """Convert to lowercase, remove extra spaces, and standardise 'to'."""
     label = label.lower().strip()
-    # Replace multiple spaces with single
     label = re.sub(r'\s+', ' ', label)
-    # Ensure 'to' is used (not dash or other)
     label = re.sub(r'\s*[-–]\s*', ' to ', label)
     return label
 
@@ -165,7 +161,6 @@ table_header_bg = "#2a2a3e" if theme == "dark" else "#f0f0f0"
 table_text = "#ffffff" if theme == "dark" else "#000000"
 table_border = "#555" if theme == "dark" else "#ddd"
 
-# ================= ENHANCED MOBILE-RESPONSIVE CSS =================
 st.markdown(f"""
 <style>
     .block-container {{
@@ -539,9 +534,8 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
-# ============= AI GENERATION (WITH SLOT NORMALISATION & RETRY) =============
+# ============= AI GENERATION =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
-    # Validate API key
     if PROVIDERS[provider]["api_key_required"] and not api_key:
         raise ValueError(f"❌ API key for {provider} is missing. Please enter it in the sidebar under Config → API Key.")
 
@@ -550,10 +544,8 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
     short_to_full = create_short_to_full_map(lunch_hour)
     full_to_short = get_full_to_short_map(lunch_hour)
 
-    # Normalised expected slots
     norm_expected = {normalize_slot_label(slot): slot for slot in slot_labels}
 
-    # --- Parse user tasks ---
     task_mapping = {}
     if user_tasks:
         for line in user_tasks.split('\n'):
@@ -566,7 +558,6 @@ def generate_schedule(user_tasks, employee_name, position, report_date, provider
                 task = task.strip()
                 task_mapping[short_time] = task
 
-    # --- First AI call ---
     def call_ai(prompt_extra=""):
         full_prompt = f"""
 You are an assistant that fills an End‑of‑Day work report.
@@ -649,62 +640,49 @@ Date: {report_date}
         else:
             raise ValueError("Unsupported provider")
 
-    # First attempt
     raw_response = None
     data = None
-    for attempt in range(2):  # two attempts with possible extra instruction
+    for attempt in range(2):
         if progress_callback:
             progress_callback(30 + attempt * 20, f"Contacting AI ({provider})... attempt {attempt+1}")
         try:
-            if attempt == 1:
-                # Add extra instruction to include all slots
-                extra = "IMPORTANT: You MUST include ALL of the following slots exactly as listed: " + ", ".join(slot_labels)
-            else:
-                extra = ""
+            extra = "IMPORTANT: You MUST include ALL of the following slots exactly as listed: " + ", ".join(slot_labels) if attempt == 1 else ""
             raw = call_ai(extra)
             raw_response = raw
             parsed = extract_and_clean_json(raw)
             if "schedule" in parsed and isinstance(parsed["schedule"], list):
-                # Normalise the received slots
                 norm_schedule = {}
                 for entry in parsed["schedule"]:
                     if "slot" in entry:
                         norm_key = normalize_slot_label(entry["slot"])
                         norm_schedule[norm_key] = entry
-                # Build complete schedule
                 complete_schedule = []
                 missing_slots = []
                 for exp_norm, exp_orig in norm_expected.items():
                     if exp_norm in norm_schedule:
                         entry = norm_schedule[exp_norm]
-                        # Use original expected label for consistency
                         entry["slot"] = exp_orig
                         complete_schedule.append(entry)
                     else:
                         missing_slots.append(exp_orig)
                 if not missing_slots:
-                    # All slots present
                     parsed["schedule"] = complete_schedule
                     data = parsed
                     break
                 else:
-                    # Some slots missing, raise error to retry with extra instruction
                     raise ValueError(f"Missing slots: {', '.join(missing_slots)}")
             else:
                 raise ValueError("No 'schedule' array in response")
         except Exception as e:
             last_error = str(e)
             if attempt == 1:
-                # Failed after second attempt, raise with details
                 raise RuntimeError(f"AI generation failed after 2 attempts.\nLast error: {last_error}")
             else:
-                # First attempt failed, continue to second attempt
                 continue
 
     if data is None:
         raise RuntimeError("Unexpected error: data is None")
 
-    # Now data has all slots. We'll override activity with user tasks and ensure descriptions exist.
     schedule_dict = {entry["slot"]: entry for entry in data["schedule"]}
     final_schedule = []
     for slot_label in slot_labels:
@@ -721,10 +699,8 @@ Date: {report_date}
                         description = "-"
                     else:
                         activity = user_task
-                        # Use AI description if available, else generate a fallback
                         description = ai_entry.get("description", "")
                         if not description or description == "No description provided.":
-                            # Fallback description (should rarely happen)
                             description = f"Worked on: {user_task}"
                 else:
                     activity = ai_entry.get("activity", "No specific task")
@@ -737,8 +713,6 @@ Date: {report_date}
                     "description": description
                 })
             else:
-                # Shouldn't happen because we ensured all slots exist
-                # But just in case, create with user task or generic
                 if user_task:
                     if user_task == "-":
                         final_schedule.append({"slot": slot_label, "activity": "-", "description": "-"})
@@ -1026,9 +1000,22 @@ with st.sidebar:
                     st.session_state.last_schedule = schedule_data
                 st.rerun()
 
+    # ========== FIXED CONFIG SECTION ==========
     with st.expander("⚙️ Config", expanded=False):
-        provider = st.selectbox("AI Provider", options=list(PROVIDERS.keys()),
-                                index=list(PROVIDERS.keys()).index(saved_provider) if saved_provider in PROVIDERS else 0)
+        # Provider dropdown
+        provider = st.selectbox(
+            "AI Provider",
+            options=list(PROVIDERS.keys()),
+            index=list(PROVIDERS.keys()).index(saved_provider) if saved_provider in PROVIDERS else 0
+        )
+        # --- model_name defined FIRST so it's available to all buttons ---
+        model_name = st.text_input(
+            "Model (optional)",
+            placeholder=PROVIDERS[provider]["default_model"],
+            value=saved_model if saved_provider == provider else ""
+        )
+
+        # --- API key logic (now model_name is already defined) ---
         if PROVIDERS[provider]["api_key_required"]:
             if saved_api_key:
                 st.success("✅ API key is set")
@@ -1049,10 +1036,8 @@ with st.sidebar:
         else:
             api_key = None
             st.info("Ollama – no key needed.")
-        model_name = st.text_input("Model (optional)",
-                                   placeholder=PROVIDERS[provider]["default_model"],
-                                   value=saved_model if saved_provider == provider else "")
 
+        # --- Save config when provider or model changes ---
         if 'prev_provider' not in st.session_state:
             st.session_state.prev_provider = provider
             st.session_state.prev_model = model_name
@@ -1207,16 +1192,13 @@ with left_col:
     st.markdown("### 📝 Task per Time Slot")
     st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
 
-    # Get time slots
     time_slots_full = get_time_slots(lunch_hour)
     time_slots_short = get_time_slots_short(lunch_hour)
     lunch_index = lunch_hour - 10
 
-    # Store user inputs in session state
     if "slot_tasks" not in st.session_state:
         st.session_state.slot_tasks = {slot: "" for slot in time_slots_full if slot != time_slots_full[lunch_index]}
 
-    # Display each slot
     for i, full_slot in enumerate(time_slots_full):
         if i == lunch_index:
             st.markdown(f"""
@@ -1242,7 +1224,6 @@ with left_col:
             )
             st.session_state.slot_tasks[full_slot] = new_val
 
-    # Build task summary
     task_lines = []
     for full_slot in time_slots_full:
         if full_slot == time_slots_full[lunch_index]:
@@ -1256,7 +1237,6 @@ with left_col:
     task_summary = "\n".join(task_lines)
     st.session_state.task_summary = task_summary
 
-    # Quick templates
     templates_quick = {
         "Feng Shui & Content": {
             "10:00-11:00": "Posted Feng Shui stories",
@@ -1346,7 +1326,6 @@ with right_col:
         }
         st.session_state.last_schedule = schedule_data
 
-        # Show raw AI response if available
         if st.session_state.raw_response:
             with st.expander("📜 AI Raw Response (for debugging)"):
                 st.code(st.session_state.raw_response, language="json")
@@ -1398,7 +1377,6 @@ if generate_clicked or regenerate_clicked:
             st.warning("Please describe your daily tasks (at least one slot).")
             st.stop()
         
-        # Get API key
         if PROVIDERS[provider]["api_key_required"]:
             saved_key = load_config().get("api_key", "")
             if saved_key:
@@ -1438,7 +1416,6 @@ if generate_clicked or regenerate_clicked:
         data = generate_schedule(tasks, emp_used, pos_used, date_used, provider_used, api_key_used, model_used, lunch_hour_used, progress_callback=update_progress)
         update_progress(95, "✨ Finalizing...")
 
-        # Store raw response for debugging
         st.session_state.raw_response = data.pop("_raw_response", None)
 
         st.session_state.last_schedule = data
@@ -1457,7 +1434,6 @@ if generate_clicked or regenerate_clicked:
         st.rerun()
     except Exception as e:
         st.error(f"❌ {e}")
-        # Show the raw response if available
         if "raw_response" in locals() and raw_response:
             with st.expander("📜 Raw AI Response (to help debug)"):
                 st.code(raw_response, language="json")
