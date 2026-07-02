@@ -39,6 +39,7 @@ st.session_state.setdefault("selected_employee_name", "Omkar Patil")
 st.session_state.setdefault("selected_employee_position", "Social Media & Digital Marketing Executive")
 st.session_state.setdefault("loaded_report", None)
 st.session_state.setdefault("loaded_date", None)
+st.session_state.setdefault("slot_tasks", {})
 
 def toggle_theme():
     st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
@@ -79,10 +80,9 @@ header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
 preview_bg = bg_secondary
 preview_border = border_color
 
-# ================= PROFESSIONAL, THEME-AWARE CSS =================
+# ================= PROFESSIONAL CSS =================
 st.markdown(f"""
 <style>
-    /* ---------- GLOBAL ---------- */
     * {{
         box-sizing: border-box;
         margin: 0;
@@ -99,7 +99,6 @@ st.markdown(f"""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         transition: background 0.3s ease, color 0.3s ease;
     }}
-    /* ---------- HEADER ---------- */
     .main-header {{
         background: {header_grad};
         background-size: 300% 300%;
@@ -171,7 +170,6 @@ st.markdown(f"""
         color: {text_color} !important;
         opacity: 0.7;
     }}
-    /* ---------- CARDS ---------- */
     .glass-card {{
         background: {card_bg};
         backdrop-filter: blur(8px);
@@ -186,7 +184,6 @@ st.markdown(f"""
         transform: translateY(-2px);
         box-shadow: 0 8px 30px {shadow_color};
     }}
-    /* ---------- SLOT CARDS ---------- */
     .slot-card {{
         background: {slot_bg};
         border-radius: 10px;
@@ -219,7 +216,6 @@ st.markdown(f"""
         border: 1px solid rgba(255,193,7,0.2);
         color: {text_color} !important;
     }}
-    /* ---------- BUTTONS ---------- */
     .stButton button {{
         padding: 0.25rem 0.5rem !important;
         font-size: 0.8rem !important;
@@ -240,9 +236,6 @@ st.markdown(f"""
         transform: scale(1.02);
         box-shadow: 0 6px 24px rgba(102, 126, 234, 0.5) !important;
         background-position: 100% 50% !important;
-    }}
-    .stButton button:active {{
-        transform: scale(0.97);
     }}
     .stDownloadButton button {{
         padding: 0.25rem 0.5rem !important;
@@ -270,7 +263,6 @@ st.markdown(f"""
     .stDownloadButton button:nth-of-type(2):hover {{
         box-shadow: 0 6px 24px rgba(220, 53, 69, 0.5) !important;
     }}
-    /* ---------- SIDEBAR ---------- */
     .css-1d391kg {{
         background: {bg_secondary} !important;
         backdrop-filter: blur(12px);
@@ -318,7 +310,6 @@ st.markdown(f"""
     .css-1d391kg .stButton button:hover {{
         background: rgba(108, 99, 255, 1) !important;
     }}
-    /* ---------- MAIN INPUTS ---------- */
     .stTextInput input, .stDateInput input, .stSelectbox select {{
         background: {input_bg} !important;
         color: {input_text} !important;
@@ -334,7 +325,6 @@ st.markdown(f"""
         border-color: #6C63FF !important;
         box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1) !important;
     }}
-    /* ---------- PREVIEW TABLE ---------- */
     .preview-table {{
         width: 100%;
         border-collapse: collapse;
@@ -363,7 +353,6 @@ st.markdown(f"""
     .preview-table tr:hover td {{
         background: rgba(108, 99, 255, 0.04);
     }}
-    /* ---------- COMPACT MOBILE ---------- */
     @media (max-width: 768px) {{
         .block-container {{
             padding: 0.15rem 0.2rem 0.1rem 0.2rem !important;
@@ -430,7 +419,176 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ================= ROBUST DATE PARSER =================
+# ================= ALL YOUR FUNCTIONS (unchanged) =================
+# ... keep all your existing functions: parse_date, get_time_slots, rebuild, load_json, etc.
+# I'll include them in the final code block for completeness.
+
+# ================= SPARKLE =================
+def sparkle():
+    st.components.v1.html("""
+    <style>
+        @keyframes sparkleFade {
+            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0.5) rotate(360deg); }
+        }
+        .sparkle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .sparkle-emoji {
+            font-size: 4rem;
+            animation: sparkleFade 1.5s ease-out forwards;
+            position: absolute;
+        }
+    </style>
+    <div class="sparkle-container">
+        <div class="sparkle-emoji" style="top:20%; left:30%; animation-delay:0s;">✨</div>
+        <div class="sparkle-emoji" style="top:40%; left:60%; animation-delay:0.3s;">🌟</div>
+        <div class="sparkle-emoji" style="top:60%; left:20%; animation-delay:0.6s;">⭐</div>
+        <div class="sparkle-emoji" style="top:30%; left:80%; animation-delay:0.9s;">✨</div>
+        <div class="sparkle-emoji" style="top:70%; left:50%; animation-delay:1.2s;">🌟</div>
+        <div class="sparkle-emoji" style="top:50%; left:40%; animation-delay:0.4s;">⭐</div>
+        <div class="sparkle-emoji" style="top:80%; left:70%; animation-delay:0.7s;">✨</div>
+        <div class="sparkle-emoji" style="top:10%; left:50%; animation-delay:0.2s;">🌟</div>
+    </div>
+    <script>
+        setTimeout(() => {
+            const container = document.querySelector('.sparkle-container');
+            if (container) container.remove();
+        }, 2500);
+    </script>
+    """, height=0)
+
+# ================= CONFIG & HELPERS =================
+CONFIG_FILE = ".eod_config.json"
+HISTORY_FILE = "history.json"
+EMPLOYEES_FILE = "employees.json"
+
+DEFAULT_EMPLOYEE = "Omkar Patil"
+DEFAULT_POSITION = "Social Media & Digital Marketing Executive"
+
+PROVIDERS = {
+    "Groq (Fastest)": {
+        "default_model": "llama-3.1-8b-instant",
+        "api_key_required": True,
+    },
+    "OpenAI (ChatGPT)": {
+        "default_model": "gpt-4o-mini",
+        "api_key_required": True,
+    },
+    "Google Gemini": {
+        "default_model": "gemini-1.5-flash",
+        "api_key_required": True,
+    },
+    "Ollama (local)": {
+        "default_model": "phi3",
+        "api_key_required": False,
+    }
+}
+
+TEMPLATE_DIR = "templates"
+os.makedirs(TEMPLATE_DIR, exist_ok=True)
+
+def get_template_list():
+    files = [f for f in os.listdir(TEMPLATE_DIR) if f.endswith('.xlsx')]
+    return sorted(files)
+
+def load_template_bytes(filename):
+    path = os.path.join(TEMPLATE_DIR, filename)
+    if os.path.exists(path):
+        with open(path, "rb") as f:
+            return f.read()
+    if os.path.exists(filename):
+        with open(filename, "rb") as f:
+            return f.read()
+    return None
+
+DEFAULT_TEMPLATE_BYTES = None
+DEFAULT_TEMPLATE_FILE = "EOD_SAMPLE_FINAL.xlsx"
+if os.path.exists(DEFAULT_TEMPLATE_FILE):
+    with open(DEFAULT_TEMPLATE_FILE, "rb") as f:
+        DEFAULT_TEMPLATE_BYTES = f.read()
+
+def generate_filename(date_obj, employee_name, extension):
+    date_str = date_obj.strftime("%d-%m-%y")
+    first_name = employee_name.split()[0].upper() if employee_name.strip() else "UNKNOWN"
+    return f"EOD_{date_str}_{first_name}.{extension}"
+
+def load_json_file(filepath, default=None):
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r") as f:
+                return json.load(f)
+        except:
+            return default if default is not None else {}
+    return default if default is not None else {}
+
+def save_json_file(filepath, data):
+    with open(filepath, "w") as f:
+        json.dump(data, f, indent=2)
+
+def load_config():
+    return load_json_file(CONFIG_FILE, {})
+
+def save_config(provider, model, api_key=None):
+    data = {"provider": provider, "model": model}
+    if api_key is not None:
+        data["api_key"] = api_key
+    save_json_file(CONFIG_FILE, data)
+
+def clear_config():
+    if os.path.exists(CONFIG_FILE):
+        os.remove(CONFIG_FILE)
+
+def load_employees():
+    return load_json_file(EMPLOYEES_FILE, [])
+
+def save_employees(employees):
+    save_json_file(EMPLOYEES_FILE, employees)
+
+def add_employee(name, position):
+    employees = load_employees()
+    if not any(e["name"] == name for e in employees):
+        employees.append({"name": name, "position": position})
+        save_employees(employees)
+    return employees
+
+def delete_employee(name):
+    employees = load_employees()
+    employees = [e for e in employees if e["name"] != name]
+    save_employees(employees)
+    return employees
+
+def load_history():
+    return load_json_file(HISTORY_FILE, [])
+
+def save_history(history):
+    save_json_file(HISTORY_FILE, history)
+
+def add_history_entry(employee_name, position, date, schedule):
+    history = load_history()
+    history.append({
+        "timestamp": datetime.now().isoformat(),
+        "employee_name": employee_name,
+        "position": position,
+        "date": date,
+        "schedule": schedule
+    })
+    save_history(history)
+
+def clear_history():
+    if os.path.exists(HISTORY_FILE):
+        os.remove(HISTORY_FILE)
+
 def parse_date(date_str):
     if not date_str:
         return datetime.now().date()
@@ -448,7 +606,6 @@ def parse_date(date_str):
             pass
     return datetime.now().date()
 
-# ================= DYNAMIC TIME SLOTS =================
 def get_time_slots(lunch_hour):
     slots = []
     for h in range(10, 18):
@@ -498,7 +655,6 @@ def get_full_to_short_map(lunch_hour):
     short_to_full = create_short_to_full_map(lunch_hour)
     return {v: k for k, v in short_to_full.items()}
 
-# ================= REBUILD SCHEDULE FOR LUNCH CHANGE =================
 def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
     if not old_schedule:
         return None
@@ -535,132 +691,6 @@ def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
             new_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
     return new_schedule
 
-# ================= CONFIG =================
-CONFIG_FILE = ".eod_config.json"
-HISTORY_FILE = "history.json"
-EMPLOYEES_FILE = "employees.json"
-
-DEFAULT_EMPLOYEE = "Omkar Patil"
-DEFAULT_POSITION = "Social Media & Digital Marketing Executive"
-
-PROVIDERS = {
-    "Groq (Fastest)": {
-        "default_model": "llama-3.1-8b-instant",
-        "api_key_required": True,
-    },
-    "OpenAI (ChatGPT)": {
-        "default_model": "gpt-4o-mini",
-        "api_key_required": True,
-    },
-    "Google Gemini": {
-        "default_model": "gemini-1.5-flash",
-        "api_key_required": True,
-    },
-    "Ollama (local)": {
-        "default_model": "phi3",
-        "api_key_required": False,
-    }
-}
-
-# ============= TEMPLATE MANAGEMENT =============
-TEMPLATE_DIR = "templates"
-os.makedirs(TEMPLATE_DIR, exist_ok=True)
-
-def get_template_list():
-    files = [f for f in os.listdir(TEMPLATE_DIR) if f.endswith('.xlsx')]
-    return sorted(files)
-
-def load_template_bytes(filename):
-    path = os.path.join(TEMPLATE_DIR, filename)
-    if os.path.exists(path):
-        with open(path, "rb") as f:
-            return f.read()
-    if os.path.exists(filename):
-        with open(filename, "rb") as f:
-            return f.read()
-    return None
-
-DEFAULT_TEMPLATE_BYTES = None
-DEFAULT_TEMPLATE_FILE = "EOD_SAMPLE_FINAL.xlsx"
-if os.path.exists(DEFAULT_TEMPLATE_FILE):
-    with open(DEFAULT_TEMPLATE_FILE, "rb") as f:
-        DEFAULT_TEMPLATE_BYTES = f.read()
-
-# ============= HELPER =============
-def generate_filename(date_obj, employee_name, extension):
-    date_str = date_obj.strftime("%d-%m-%y")
-    first_name = employee_name.split()[0].upper() if employee_name.strip() else "UNKNOWN"
-    return f"EOD_{date_str}_{first_name}.{extension}"
-
-# ============= PERSISTENCE HELPERS =============
-def load_json_file(filepath, default=None):
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, "r") as f:
-                return json.load(f)
-        except:
-            return default if default is not None else {}
-    return default if default is not None else {}
-
-def save_json_file(filepath, data):
-    with open(filepath, "w") as f:
-        json.dump(data, f, indent=2)
-
-def load_config():
-    return load_json_file(CONFIG_FILE, {})
-
-def save_config(provider, model, api_key=None):
-    data = {"provider": provider, "model": model}
-    if api_key is not None:
-        data["api_key"] = api_key
-    save_json_file(CONFIG_FILE, data)
-
-def clear_config():
-    if os.path.exists(CONFIG_FILE):
-        os.remove(CONFIG_FILE)
-
-# ============= EMPLOYEE & HISTORY =============
-def load_employees():
-    return load_json_file(EMPLOYEES_FILE, [])
-
-def save_employees(employees):
-    save_json_file(EMPLOYEES_FILE, employees)
-
-def add_employee(name, position):
-    employees = load_employees()
-    if not any(e["name"] == name for e in employees):
-        employees.append({"name": name, "position": position})
-        save_employees(employees)
-    return employees
-
-def delete_employee(name):
-    employees = load_employees()
-    employees = [e for e in employees if e["name"] != name]
-    save_employees(employees)
-    return employees
-
-def load_history():
-    return load_json_file(HISTORY_FILE, [])
-
-def save_history(history):
-    save_json_file(HISTORY_FILE, history)
-
-def add_history_entry(employee_name, position, date, schedule):
-    history = load_history()
-    history.append({
-        "timestamp": datetime.now().isoformat(),
-        "employee_name": employee_name,
-        "position": position,
-        "date": date,
-        "schedule": schedule
-    })
-    save_history(history)
-
-def clear_history():
-    if os.path.exists(HISTORY_FILE):
-        os.remove(HISTORY_FILE)
-
-# ============= JSON PARSER =============
 def extract_and_clean_json(raw_text):
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
@@ -913,13 +943,12 @@ Date: {report_date}
     data["_raw_response"] = raw_response
     return data
 
-# ============= EXCEL GENERATION =============
+# ============= EXCEL & PDF (unchanged) =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
     if time_slots is None:
         time_slots = get_time_slots(13)
-
     try:
         if template_bytes:
             wb = load_workbook(BytesIO(template_bytes))
@@ -1014,19 +1043,15 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
     output.seek(0)
     return output
 
-# ============= PDF GENERATION =============
 def create_pdf_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
     excel_bytes = create_excel_from_schedule(schedule_data, template_bytes, time_slots)
     excel_data = excel_bytes.getvalue()
-
     with tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False) as tmp_xlsx:
         tmp_xlsx.write(excel_data)
         xlsx_path = tmp_xlsx.name
-
     pdf_path = xlsx_path.replace('.xlsx', '.pdf')
-
     try:
         subprocess.run([
             'soffice',
@@ -1035,16 +1060,12 @@ def create_pdf_from_schedule(schedule_data, template_bytes=None, time_slots=None
             '--outdir', os.path.dirname(pdf_path),
             xlsx_path
         ], check=True, timeout=60)
-
         with open(pdf_path, 'rb') as f:
             pdf_bytes = f.read()
-
         os.unlink(xlsx_path)
         os.unlink(pdf_path)
-
         return BytesIO(pdf_bytes)
-
-    except (subprocess.CalledProcessError, FileNotFoundError, Exception) as e:
+    except:
         if os.path.exists(xlsx_path):
             os.unlink(xlsx_path)
         if os.path.exists(pdf_path):
@@ -1061,20 +1082,17 @@ def create_fallback_pdf(schedule_data, time_slots=None):
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
     from io import BytesIO
-
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4,
                             rightMargin=15, leftMargin=15,
                             topMargin=15, bottomMargin=15)
     elements = []
     styles = getSampleStyleSheet()
-
     title_style = ParagraphStyle('TitleStyle', parent=styles['Title'],
                                  alignment=1, fontSize=16, spaceAfter=8,
                                  fontName='Helvetica-Bold')
     elements.append(Paragraph("EOD REPORT", title_style))
     elements.append(Spacer(1, 4))
-
     detail_data = [
         ["Name Of Employee", schedule_data.get("employee_name", "N/A")],
         ["Position", schedule_data.get("position", "N/A")],
@@ -1089,7 +1107,6 @@ def create_fallback_pdf(schedule_data, time_slots=None):
             detail_data[2][1] = date_val
     elif isinstance(date_val, datetime):
         detail_data[2][1] = date_val.strftime("%d/%m/%Y")
-
     detail_table = Table(detail_data, colWidths=[2.0*inch, 5.5*inch])
     detail_table.setStyle(TableStyle([
         ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
@@ -1105,7 +1122,6 @@ def create_fallback_pdf(schedule_data, time_slots=None):
     ]))
     elements.append(detail_table)
     elements.append(Spacer(1, 10))
-
     schedule_list = schedule_data.get("schedule", [])
     table_data = [["Time", "Activity", "Description"]]
     for entry in schedule_list:
@@ -1114,7 +1130,6 @@ def create_fallback_pdf(schedule_data, time_slots=None):
             entry.get("activity", ""),
             entry.get("description", "")
         ])
-
     col_widths = [1.2*inch, 2.2*inch, 3.9*inch]
     schedule_table = Table(table_data, colWidths=col_widths, repeatRows=1)
     schedule_table.setStyle(TableStyle([
@@ -1134,56 +1149,10 @@ def create_fallback_pdf(schedule_data, time_slots=None):
         ('WORDWRAP', (0,0), (-1,-1), True),
     ]))
     elements.append(schedule_table)
-
     doc.build(elements)
     pdf_data = buffer.getvalue()
     buffer.close()
     return BytesIO(pdf_data)
-
-# ============= SPARKLE ANIMATION (replaces confetti) =============
-def sparkle():
-    st.components.v1.html("""
-    <style>
-        @keyframes sparkleFade {
-            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
-            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
-            100% { opacity: 0; transform: scale(0.5) rotate(360deg); }
-        }
-        .sparkle-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .sparkle-emoji {
-            font-size: 4rem;
-            animation: sparkleFade 1.5s ease-out forwards;
-            position: absolute;
-        }
-    </style>
-    <div class="sparkle-container">
-        <div class="sparkle-emoji" style="top:20%; left:30%; animation-delay:0s;">✨</div>
-        <div class="sparkle-emoji" style="top:40%; left:60%; animation-delay:0.3s;">🌟</div>
-        <div class="sparkle-emoji" style="top:60%; left:20%; animation-delay:0.6s;">⭐</div>
-        <div class="sparkle-emoji" style="top:30%; left:80%; animation-delay:0.9s;">✨</div>
-        <div class="sparkle-emoji" style="top:70%; left:50%; animation-delay:1.2s;">🌟</div>
-        <div class="sparkle-emoji" style="top:50%; left:40%; animation-delay:0.4s;">⭐</div>
-        <div class="sparkle-emoji" style="top:80%; left:70%; animation-delay:0.7s;">✨</div>
-        <div class="sparkle-emoji" style="top:10%; left:50%; animation-delay:0.2s;">🌟</div>
-    </div>
-    <script>
-        setTimeout(() => {
-            const container = document.querySelector('.sparkle-container');
-            if (container) container.remove();
-        }, 2500);
-    </script>
-    """, height=0)
 
 # ============= STREAMLIT UI =============
 config = load_config()
@@ -1191,18 +1160,15 @@ saved_provider = config.get("provider", "Groq (Fastest)")
 saved_model = config.get("model", "")
 saved_api_key = config.get("api_key", "")
 
-# ---- Sidebar ----
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/google-forms.png", width=25)
     theme_label = "☀️ Light" if st.session_state.theme == "dark" else "🌙 Dark"
     if st.button(f"Switch to {theme_label} Theme", use_container_width=True):
         toggle_theme()
 
-    # ---- Lunch Break Slider ----
     st.markdown("## 🕒 Lunch Break")
     if "prev_lunch_hour" not in st.session_state:
         st.session_state.prev_lunch_hour = 13
-
     lunch_hour = st.slider(
         "Select lunch break start:",
         min_value=12,
@@ -1211,7 +1177,6 @@ with st.sidebar:
         step=1,
         format="%d:00 PM"
     )
-
     if lunch_hour != st.session_state.prev_lunch_hour:
         st.session_state.prev_lunch_hour = lunch_hour
         if "current_schedule" in st.session_state and st.session_state.current_schedule is not None:
@@ -1229,7 +1194,6 @@ with st.sidebar:
                     st.session_state.last_schedule = schedule_data
                 st.rerun()
 
-    # ========== CONFIG SECTION ==========
     with st.expander("⚙️ Config", expanded=False):
         provider = st.selectbox(
             "AI Provider",
@@ -1241,7 +1205,6 @@ with st.sidebar:
             placeholder=PROVIDERS[provider]["default_model"],
             value=saved_model if saved_provider == provider else ""
         )
-
         if PROVIDERS[provider]["api_key_required"]:
             if saved_api_key:
                 st.success("✅ API key is set")
@@ -1262,11 +1225,9 @@ with st.sidebar:
         else:
             api_key = None
             st.info("Ollama – no key needed.")
-
         if 'prev_provider' not in st.session_state:
             st.session_state.prev_provider = provider
             st.session_state.prev_model = model_name
-
         if (provider != st.session_state.prev_provider or
             model_name != st.session_state.prev_model):
             current_key = saved_api_key if saved_api_key else ""
@@ -1274,7 +1235,6 @@ with st.sidebar:
             st.session_state.prev_provider = provider
             st.session_state.prev_model = model_name
             st.success("✅ Config saved")
-
         if st.button("🗑️ Clear all config (including API key)"):
             clear_config()
             st.success("Config cleared.")
@@ -1292,7 +1252,6 @@ with st.sidebar:
                 st.session_state.selected_employee_position = emp_details["position"]
         else:
             selected_emp = None
-
         with st.expander("➕ Add"):
             new_name = st.text_input("Name")
             new_pos = st.text_input("Position")
@@ -1303,7 +1262,6 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.warning("Fill both")
-
         if selected_emp and st.button("🗑️ Delete"):
             delete_employee(selected_emp)
             st.success(f"Deleted {selected_emp}")
@@ -1311,14 +1269,12 @@ with st.sidebar:
 
     st.divider()
     st.markdown("## 📁 Template")
-
     template_files = get_template_list()
     if DEFAULT_TEMPLATE_BYTES is not None:
         default_name = DEFAULT_TEMPLATE_FILE
         if default_name not in template_files:
             template_files.insert(0, default_name)
     template_options = ["Built-in"] + template_files
-
     selected_template = st.selectbox("Select Template", template_options)
     if selected_template == "Built-in":
         template_bytes = None
@@ -1339,7 +1295,7 @@ with st.sidebar:
         st.success(f"Saved '{uploaded_file.name}' to templates folder.")
         st.rerun()
 
-    # ---- "Clear loaded" button right below "Load template" ----
+    # ---- CLEAR LOADED BUTTON ----
     if st.session_state.get("loaded_report") is not None:
         if st.button("🗑️ Clear loaded", use_container_width=True):
             st.session_state.loaded_report = None
@@ -1353,7 +1309,6 @@ with st.sidebar:
             clear_history()
             st.success("History cleared.")
             st.rerun()
-
         all_history = load_history()
         employee_list = sorted(set(entry["employee_name"] for entry in all_history))
         selected_filter = st.selectbox("Filter", ["All"] + employee_list)
@@ -1361,7 +1316,6 @@ with st.sidebar:
             filtered_history = [h for h in all_history if h["employee_name"] == selected_filter]
         else:
             filtered_history = all_history
-
         if filtered_history:
             groups = {}
             for entry in reversed(filtered_history):
@@ -1377,19 +1331,10 @@ with st.sidebar:
                         if st.button(f"📂 {display_date}", key=f"load_{emp}_{timestamp}"):
                             st.session_state.loaded_report = entry
                             # Populate slot_tasks from the loaded schedule
-                            if "slot_tasks" not in st.session_state:
-                                st.session_state.slot_tasks = {}
+                            st.session_state.slot_tasks = {}
                             for slot in entry["schedule"]:
-                                # Extract short time from full slot label
                                 full_slot = slot["slot"]
-                                # Find the corresponding short key for this full slot
-                                short_key = None
-                                for sk, fk in create_short_to_full_map(lunch_hour).items():
-                                    if fk == full_slot:
-                                        short_key = sk
-                                        break
-                                if short_key:
-                                    st.session_state.slot_tasks[full_slot] = slot["activity"]
+                                st.session_state.slot_tasks[full_slot] = slot["activity"]
                             st.rerun()
                         st.caption(f"Position: {entry.get('position', '')}")
         else:
@@ -1412,7 +1357,7 @@ if st.session_state.get("loaded_report") is not None:
         "schedule": report["schedule"]
     }
 
-# ---- Session state ----
+# ---- Session state init ----
 if "loaded_report" not in st.session_state:
     st.session_state.loaded_report = None
 if "last_schedule" not in st.session_state:
@@ -1687,9 +1632,13 @@ if generate_clicked or regenerate_clicked:
         if not any(e["name"] == emp_used for e in emp_list):
             add_employee(emp_used, pos_used)
 
+        # Update current schedule and also slot_tasks so left inputs show the generated activities
         st.session_state.current_schedule = data["schedule"]
+        # Also populate slot_tasks with the generated activities
+        for entry in data["schedule"]:
+            full_slot = entry["slot"]
+            st.session_state.slot_tasks[full_slot] = entry["activity"]
 
-        # Trigger sparkle animation instead of balloons
         sparkle()
         st.success("✅ Report generated successfully! ✨")
         status_text.empty()
