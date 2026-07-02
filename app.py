@@ -42,6 +42,7 @@ st.session_state.setdefault("loaded_date", None)
 st.session_state.setdefault("slot_tasks", {})
 st.session_state.setdefault("current_schedule", None)
 st.session_state.setdefault("last_schedule", None)
+st.session_state.setdefault("schedule_version", 0)  # Increment to refresh edit inputs
 
 def toggle_theme():
     st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
@@ -1365,6 +1366,8 @@ with st.sidebar:
                                 st.session_state.loaded_date = parse_date(entry["date"])
                             except:
                                 st.session_state.loaded_date = datetime.now()
+                            # Increment version to refresh edit inputs
+                            st.session_state.schedule_version += 1
                             st.rerun()
                         st.caption(f"Position: {entry.get('position', '')}")
         else:
@@ -1393,6 +1396,8 @@ if "loaded_date" not in st.session_state:
     st.session_state.loaded_date = None
 if "slot_tasks" not in st.session_state:
     st.session_state.slot_tasks = {}
+if "schedule_version" not in st.session_state:
+    st.session_state.schedule_version = 0
 
 # ---- Main area ----
 left_col, right_col = st.columns([0.4, 0.6], gap="small")
@@ -1523,6 +1528,7 @@ with right_col:
 
         schedule_list = st.session_state.current_schedule
         edited_schedule = []
+        version = st.session_state.schedule_version  # used in keys to force refresh
 
         for idx, entry in enumerate(schedule_list):
             cols = st.columns([2, 2, 3])
@@ -1532,14 +1538,14 @@ with right_col:
                 new_activity = st.text_input(
                     "Activity",
                     value=entry["activity"],
-                    key=f"edit_act_{idx}",
+                    key=f"edit_act_{idx}_{version}",  # version ensures fresh state
                     label_visibility="collapsed"
                 )
             with cols[2]:
                 new_description = st.text_input(
                     "Description",
                     value=entry["description"],
-                    key=f"edit_desc_{idx}",
+                    key=f"edit_desc_{idx}_{version}",
                     label_visibility="collapsed"
                 )
             edited_schedule.append({
@@ -1652,6 +1658,8 @@ if generate_clicked or regenerate_clicked:
         # Clear loaded report flag (so the "Clear loaded" button disappears)
         st.session_state.loaded_report = None
         st.session_state.loaded_date = None
+        # Increment version to refresh edit inputs
+        st.session_state.schedule_version += 1
 
         sparkle()
         st.success("✅ Report generated successfully! ✨")
