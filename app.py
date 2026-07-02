@@ -1296,7 +1296,7 @@ with st.sidebar:
         st.success(f"Saved '{uploaded_file.name}' to templates folder.")
         st.rerun()
 
-    # ---- CLEAR LOADED BUTTON (optional) ----
+    # ---- CLEAR LOADED BUTTON ----
     if st.session_state.get("loaded_report") is not None:
         if st.button("🗑️ Clear loaded", use_container_width=True):
             st.session_state.loaded_report = None
@@ -1516,6 +1516,7 @@ with left_col:
                                        disabled=st.session_state.last_schedule is None)
 
 with right_col:
+    # Always show the edit schedule if current_schedule exists
     if st.session_state.current_schedule is not None:
         st.markdown("### 📊 Edit Schedule")
         st.caption("Edit Activity and Description directly below.")
@@ -1651,13 +1652,14 @@ if generate_clicked or regenerate_clicked:
         if not any(e["name"] == emp_used for e in emp_list):
             add_employee(emp_used, pos_used)
 
-        # Update current schedule and slot_tasks
+        # CRITICAL: Set the schedule in session state
         st.session_state.current_schedule = data["schedule"]
+        # Update the slot_tasks so the left panel reflects the generated activities
         for entry in data["schedule"]:
             full_slot = entry["slot"]
             st.session_state.slot_tasks[full_slot] = entry["activity"]
 
-        # Clear the loaded_report flag so the "Clear loaded" button disappears
+        # Clear loaded report flag (so the "Clear loaded" button disappears)
         st.session_state.loaded_report = None
         st.session_state.loaded_date = None
 
