@@ -1589,48 +1589,38 @@ with right_col:
 
 # ---- Generation logic ----
 if generate_clicked or regenerate_clicked:
-    if regenerate_clicked:
-        tasks = st.session_state.last_input
-        cfg = st.session_state.last_config
-        provider_used = cfg["provider"]
-        api_key_used = cfg["api_key"]
-        model_used = cfg["model"]
-        emp_used = cfg["employee"]
-        pos_used = cfg["position"]
-        date_used = cfg["date"]
-        lunch_hour_used = cfg.get("lunch_hour", 13)
-    else:
-        tasks = st.session_state.task_summary.strip()
-        if not tasks:
-            st.warning("Please describe your daily tasks (at least one slot).")
-            st.stop()
-        
-        if PROVIDERS[provider]["api_key_required"]:
-            saved_key = load_config().get("api_key", "")
-            if saved_key:
-                api_key = saved_key
-            else:
-                api_key = ""
+    # Use the current task summary for generation
+    tasks = st.session_state.task_summary.strip()
+    if not tasks:
+        st.warning("Please describe your daily tasks (at least one slot).")
+        st.stop()
+    
+    if PROVIDERS[provider]["api_key_required"]:
+        saved_key = load_config().get("api_key", "")
+        if saved_key:
+            api_key = saved_key
         else:
-            api_key = None
-            
-        emp_used = st.session_state.selected_employee_name
-        pos_used = st.session_state.selected_employee_position
-        date_used = report_date.strftime("%d/%m/%Y")
-        lunch_hour_used = lunch_hour
-        st.session_state.last_input = tasks
-        st.session_state.last_config = {
-            "provider": provider,
-            "api_key": api_key,
-            "model": model_name,
-            "employee": emp_used,
-            "position": pos_used,
-            "date": date_used,
-            "lunch_hour": lunch_hour_used
-        }
-        provider_used = provider
-        api_key_used = api_key
-        model_used = model_name
+            api_key = ""
+    else:
+        api_key = None
+        
+    emp_used = st.session_state.selected_employee_name
+    pos_used = st.session_state.selected_employee_position
+    date_used = report_date.strftime("%d/%m/%Y")
+    lunch_hour_used = lunch_hour
+    st.session_state.last_input = tasks
+    st.session_state.last_config = {
+        "provider": provider,
+        "api_key": api_key,
+        "model": model_name,
+        "employee": emp_used,
+        "position": pos_used,
+        "date": date_used,
+        "lunch_hour": lunch_hour_used
+    }
+    provider_used = provider
+    api_key_used = api_key
+    model_used = model_name
 
     progress_bar = st.progress(0)
     status_text = st.empty()
