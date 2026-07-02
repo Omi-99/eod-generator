@@ -159,7 +159,6 @@ st.markdown(f"""
         z-index: 2;
         color: white !important;
     }}
-    /* ---------- ALL TEXT ELEMENTS ---------- */
     .stMarkdown, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, 
     .stMarkdown h4, .stMarkdown h5, .stMarkdown h6, .stMarkdown li, .stMarkdown blockquote,
     .stTextInput label, .stDateInput label, .stSelectbox label, .stSlider label,
@@ -419,10 +418,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ================= ALL YOUR FUNCTIONS (unchanged) =================
-# ... keep all your existing functions: parse_date, get_time_slots, rebuild, load_json, etc.
-# I'll include them in the final code block for completeness.
-
 # ================= SPARKLE =================
 def sparkle():
     st.components.v1.html("""
@@ -468,7 +463,7 @@ def sparkle():
     </script>
     """, height=0)
 
-# ================= CONFIG & HELPERS =================
+# ================= HELPERS =================
 CONFIG_FILE = ".eod_config.json"
 HISTORY_FILE = "history.json"
 EMPLOYEES_FILE = "employees.json"
@@ -943,7 +938,7 @@ Date: {report_date}
     data["_raw_response"] = raw_response
     return data
 
-# ============= EXCEL & PDF (unchanged) =============
+# ============= EXCEL & PDF =============
 def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=None):
     if template_bytes is None:
         template_bytes = DEFAULT_TEMPLATE_BYTES
@@ -1329,12 +1324,28 @@ with st.sidebar:
                         display_date = entry.get("date", "N/A")
                         timestamp = entry.get("timestamp", str(idx))
                         if st.button(f"📂 {display_date}", key=f"load_{emp}_{timestamp}"):
+                            # Load the report into session state
                             st.session_state.loaded_report = entry
                             # Populate slot_tasks from the loaded schedule
                             st.session_state.slot_tasks = {}
                             for slot in entry["schedule"]:
                                 full_slot = slot["slot"]
                                 st.session_state.slot_tasks[full_slot] = slot["activity"]
+                            # Set current_schedule and last_schedule
+                            st.session_state.current_schedule = entry["schedule"]
+                            st.session_state.last_schedule = {
+                                "employee_name": entry["employee_name"],
+                                "position": entry["position"],
+                                "date": entry["date"],
+                                "schedule": entry["schedule"]
+                            }
+                            # Update employee and position
+                            st.session_state.selected_employee_name = entry["employee_name"]
+                            st.session_state.selected_employee_position = entry["position"]
+                            try:
+                                st.session_state.loaded_date = parse_date(entry["date"])
+                            except:
+                                st.session_state.loaded_date = datetime.now()
                             st.rerun()
                         st.caption(f"Position: {entry.get('position', '')}")
         else:
@@ -1343,19 +1354,8 @@ with st.sidebar:
 # ---- Load history if present ----
 if st.session_state.get("loaded_report") is not None:
     report = st.session_state.loaded_report
-    st.session_state.selected_employee_name = report["employee_name"]
-    st.session_state.selected_employee_position = report["position"]
-    try:
-        st.session_state.loaded_date = parse_date(report["date"])
-    except:
-        st.session_state.loaded_date = datetime.now()
-    st.session_state.current_schedule = report["schedule"]
-    st.session_state.last_schedule = {
-        "employee_name": report["employee_name"],
-        "position": report["position"],
-        "date": report["date"],
-        "schedule": report["schedule"]
-    }
+    # Already set above, but ensure consistency
+    pass
 
 # ---- Session state init ----
 if "loaded_report" not in st.session_state:
@@ -1632,9 +1632,8 @@ if generate_clicked or regenerate_clicked:
         if not any(e["name"] == emp_used for e in emp_list):
             add_employee(emp_used, pos_used)
 
-        # Update current schedule and also slot_tasks so left inputs show the generated activities
+        # Update current schedule and slot_tasks
         st.session_state.current_schedule = data["schedule"]
-        # Also populate slot_tasks with the generated activities
         for entry in data["schedule"]:
             full_slot = entry["slot"]
             st.session_state.slot_tasks[full_slot] = entry["activity"]
