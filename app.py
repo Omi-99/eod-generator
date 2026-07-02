@@ -719,6 +719,18 @@ def extract_and_clean_json(raw_text):
         pass
     raise ValueError("Could not parse JSON")
 
+# ============= HELPER: get hour from slot label =============
+def get_hour_from_slot_label(slot_label):
+    match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
+    if match:
+        hour = int(match.group(1))
+        if match.group(2) == 'pm' and hour != 12:
+            hour += 12
+        elif match.group(2) == 'am' and hour == 12:
+            hour = 0
+        return hour
+    return None
+
 # ============= AI GENERATION =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
     if PROVIDERS[provider]["api_key_required"] and not api_key:
@@ -1320,13 +1332,26 @@ with st.sidebar:
                         display_date = entry.get("date", "N/A")
                         timestamp = entry.get("timestamp", str(idx))
                         if st.button(f"📂 {display_date}", key=f"load_{emp}_{timestamp}"):
-                            # Load the report into session state
+                            # Load the report
                             st.session_state.loaded_report = entry
-                            # Populate slot_tasks from the loaded schedule
+                            # Populate slot_tasks by matching hour to current slots
+                            current_slots = get_time_slots(lunch_hour)
+                            # Build hour->current slot mapping
+                            hour_to_current_slot = {}
+                            for slot in current_slots:
+                                h = get_hour_from_slot_label(slot)
+                                if h is not None:
+                                    hour_to_current_slot[h] = slot
+                            # Clear and fill slot_tasks
                             st.session_state.slot_tasks = {}
-                            for slot in entry["schedule"]:
-                                full_slot = slot["slot"]
-                                st.session_state.slot_tasks[full_slot] = slot["activity"]
+                            for slot_entry in entry["schedule"]:
+                                h = get_hour_from_slot_label(slot_entry["slot"])
+                                if h is not None and h in hour_to_current_slot:
+                                    current_slot = hour_to_current_slot[h]
+                                    st.session_state.slot_tasks[current_slot] = slot_entry["activity"]
+                                else:
+                                    # fallback: keep original slot label
+                                    st.session_state.slot_tasks[slot_entry["slot"]] = slot_entry["activity"]
                             # Set current_schedule and last_schedule
                             st.session_state.current_schedule = entry["schedule"]
                             st.session_state.last_schedule = {
@@ -1350,20 +1375,8 @@ with st.sidebar:
 # ---- Ensure loaded report is applied on rerun ----
 if st.session_state.get("loaded_report") is not None:
     report = st.session_state.loaded_report
-    # Already set in the click handler, but ensure consistency
-    st.session_state.selected_employee_name = report["employee_name"]
-    st.session_state.selected_employee_position = report["position"]
-    try:
-        st.session_state.loaded_date = parse_date(report["date"])
-    except:
-        st.session_state.loaded_date = datetime.now()
-    st.session_state.current_schedule = report["schedule"]
-    st.session_state.last_schedule = {
-        "employee_name": report["employee_name"],
-        "position": report["position"],
-        "date": report["date"],
-        "schedule": report["schedule"]
-    }
+    # Already set in click handler, but ensure consistency
+    pass
 
 # ---- Session state init ----
 if "loaded_report" not in st.session_state:
