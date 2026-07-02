@@ -1140,23 +1140,48 @@ def create_fallback_pdf(schedule_data, time_slots=None):
     buffer.close()
     return BytesIO(pdf_data)
 
-# ============= CONFETTI =============
-def confetti():
+# ============= SPARKLE ANIMATION (replaces confetti) =============
+def sparkle():
     st.components.v1.html("""
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    <style>
+        @keyframes sparkleFade {
+            0% { opacity: 0; transform: scale(0.5) rotate(0deg); }
+            50% { opacity: 1; transform: scale(1.2) rotate(180deg); }
+            100% { opacity: 0; transform: scale(0.5) rotate(360deg); }
+        }
+        .sparkle-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .sparkle-emoji {
+            font-size: 4rem;
+            animation: sparkleFade 1.5s ease-out forwards;
+            position: absolute;
+        }
+    </style>
+    <div class="sparkle-container">
+        <div class="sparkle-emoji" style="top:20%; left:30%; animation-delay:0s;">✨</div>
+        <div class="sparkle-emoji" style="top:40%; left:60%; animation-delay:0.3s;">🌟</div>
+        <div class="sparkle-emoji" style="top:60%; left:20%; animation-delay:0.6s;">⭐</div>
+        <div class="sparkle-emoji" style="top:30%; left:80%; animation-delay:0.9s;">✨</div>
+        <div class="sparkle-emoji" style="top:70%; left:50%; animation-delay:1.2s;">🌟</div>
+        <div class="sparkle-emoji" style="top:50%; left:40%; animation-delay:0.4s;">⭐</div>
+        <div class="sparkle-emoji" style="top:80%; left:70%; animation-delay:0.7s;">✨</div>
+        <div class="sparkle-emoji" style="top:10%; left:50%; animation-delay:0.2s;">🌟</div>
+    </div>
     <script>
-        confetti({
-            particleCount: 150,
-            spread: 70,
-            origin: { y: 0.6 }
-        });
         setTimeout(() => {
-            confetti({
-                particleCount: 100,
-                spread: 50,
-                origin: { y: 0.5 }
-            });
-        }, 500);
+            const container = document.querySelector('.sparkle-container');
+            if (container) container.remove();
+        }, 2500);
     </script>
     """, height=0)
 
@@ -1314,6 +1339,15 @@ with st.sidebar:
         st.success(f"Saved '{uploaded_file.name}' to templates folder.")
         st.rerun()
 
+    # ---- "Clear loaded" button right below "Load template" ----
+    if st.session_state.get("loaded_report") is not None:
+        if st.button("🗑️ Clear loaded", use_container_width=True):
+            st.session_state.loaded_report = None
+            st.session_state.current_schedule = None
+            st.session_state.loaded_date = None
+            st.session_state.slot_tasks = {}
+            st.rerun()
+
     with st.expander("📜 History", expanded=False):
         if st.button("🗑️ Clear History", use_container_width=True):
             clear_history()
@@ -1342,39 +1376,41 @@ with st.sidebar:
                         timestamp = entry.get("timestamp", str(idx))
                         if st.button(f"📂 {display_date}", key=f"load_{emp}_{timestamp}"):
                             st.session_state.loaded_report = entry
+                            # Populate slot_tasks from the loaded schedule
+                            if "slot_tasks" not in st.session_state:
+                                st.session_state.slot_tasks = {}
+                            for slot in entry["schedule"]:
+                                # Extract short time from full slot label
+                                full_slot = slot["slot"]
+                                # Find the corresponding short key for this full slot
+                                short_key = None
+                                for sk, fk in create_short_to_full_map(lunch_hour).items():
+                                    if fk == full_slot:
+                                        short_key = sk
+                                        break
+                                if short_key:
+                                    st.session_state.slot_tasks[full_slot] = slot["activity"]
                             st.rerun()
                         st.caption(f"Position: {entry.get('position', '')}")
         else:
             st.write("No reports yet.")
 
-        if "loaded_report" in st.session_state and st.session_state.loaded_report is not None:
-            if st.button("🗑️ Clear loaded", use_container_width=True):
-                st.session_state.loaded_report = None
-                st.session_state.current_schedule = None
-                st.session_state.loaded_date = None
-                st.rerun()
-
 # ---- Load history if present ----
 if st.session_state.get("loaded_report") is not None:
     report = st.session_state.loaded_report
-    # Update employee, position, date
     st.session_state.selected_employee_name = report["employee_name"]
     st.session_state.selected_employee_position = report["position"]
-    # Parse date and store for date input
     try:
         st.session_state.loaded_date = parse_date(report["date"])
     except:
         st.session_state.loaded_date = datetime.now()
-    # Set the current schedule to the loaded one
     st.session_state.current_schedule = report["schedule"]
-    # Also set last_schedule so that download buttons work
     st.session_state.last_schedule = {
         "employee_name": report["employee_name"],
         "position": report["position"],
         "date": report["date"],
         "schedule": report["schedule"]
     }
-    # We keep loaded_report so that we can show a "Clear loaded" button.
 
 # ---- Session state ----
 if "loaded_report" not in st.session_state:
@@ -1391,6 +1427,8 @@ if "raw_response" not in st.session_state:
     st.session_state.raw_response = None
 if "loaded_date" not in st.session_state:
     st.session_state.loaded_date = None
+if "slot_tasks" not in st.session_state:
+    st.session_state.slot_tasks = {}
 
 # ---- Main area ----
 left_col, right_col = st.columns([0.4, 0.6], gap="small")
@@ -1413,7 +1451,6 @@ with left_col:
         st.session_state.selected_employee_position = DEFAULT_POSITION
 
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
-    # Use loaded date if available, else today
     default_date = st.session_state.loaded_date if st.session_state.loaded_date is not None else datetime.now()
     report_date = st.date_input("📅 Date", value=default_date, format="DD/MM/YYYY")
 
@@ -1424,8 +1461,10 @@ with left_col:
     time_slots_short = get_time_slots_short(lunch_hour)
     lunch_index = lunch_hour - 10
 
-    if "slot_tasks" not in st.session_state:
-        st.session_state.slot_tasks = {slot: "" for slot in time_slots_full if slot != time_slots_full[lunch_index]}
+    # Ensure slot_tasks has keys for all slots
+    for slot in time_slots_full:
+        if slot not in st.session_state.slot_tasks:
+            st.session_state.slot_tasks[slot] = ""
 
     for i, full_slot in enumerate(time_slots_full):
         if i == lunch_index:
@@ -1650,9 +1689,9 @@ if generate_clicked or regenerate_clicked:
 
         st.session_state.current_schedule = data["schedule"]
 
-        st.balloons()
-        confetti()
-        st.success("✅ Report generated successfully! 🎉")
+        # Trigger sparkle animation instead of balloons
+        sparkle()
+        st.success("✅ Report generated successfully! ✨")
         status_text.empty()
         progress_bar.empty()
         st.rerun()
