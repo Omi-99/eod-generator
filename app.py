@@ -151,7 +151,6 @@ st.markdown(f"""
     .stButton button:active {{
         transform: scale(0.97);
     }}
-    /* Download buttons */
     .stDownloadButton button {{
         padding: 0.5rem 0.8rem !important;
         font-size: 0.9rem !important;
