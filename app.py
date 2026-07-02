@@ -33,7 +33,7 @@ st.markdown("""
 
 # ================= THEME STATE =================
 if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
+    st.session_state.theme = "light"  # default to light for best readability
 
 st.session_state.setdefault("selected_employee_name", "Omkar Patil")
 st.session_state.setdefault("selected_employee_position", "Social Media & Digital Marketing Executive")
@@ -43,20 +43,20 @@ def toggle_theme():
 
 # ================= THEME VARIABLES =================
 theme = st.session_state.theme
-bg_primary = "#f0f2f6" if theme == "light" else "#0f0f1a"   # light background for content
-text_color = "#000000"  # force black text everywhere
-bg_secondary = "#ffffff" if theme == "light" else "rgba(20,20,40,0.85)"
-card_bg = "rgba(255,255,255,0.85)" if theme == "light" else "rgba(30,30,50,0.6)"
-border_color = "rgba(0,0,0,0.1)" if theme == "light" else "rgba(255,255,255,0.15)"
-shadow_color = "rgba(0,0,0,0.1)" if theme == "light" else "rgba(0,0,0,0.3)"
+# Professional light background with dark text
+bg_primary = "#f8f9fa"   # soft off-white
+bg_secondary = "#ffffff"
+text_color = "#1a1a1a"   # consistent dark text
+card_bg = "rgba(255,255,255,0.9)"
+border_color = "rgba(0,0,0,0.08)"
+shadow_color = "rgba(0,0,0,0.08)"
 header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
-preview_bg = "white" if theme == "light" else "rgba(255,255,255,0.08)"
-preview_border = "#ddd" if theme == "light" else "#444"
-table_header_bg = "#f0f0f0" if theme == "light" else "#2a2a3e"
-table_text = "#000000"
-table_border = "#ddd" if theme == "light" else "#555"
+preview_bg = "#ffffff"
+preview_border = "#e0e0e0"
+table_header_bg = "#f0f2f6"
+table_border = "#d0d0d0"
 
-# ================= COMPACT, BLACK-TEXT CSS =================
+# ================= PROFESSIONAL, UNIFIED CSS =================
 st.markdown(f"""
 <style>
     /* ---------- GLOBAL ---------- */
@@ -66,14 +66,13 @@ st.markdown(f"""
         padding: 0;
     }}
     .block-container {{
-        padding: 0.2rem 0.4rem 0.1rem 0.4rem !important;
+        padding: 0.3rem 0.6rem 0.2rem 0.6rem !important;
         max-width: 1100px !important;
         margin: 0 auto !important;
     }}
     .stApp {{
         background: {bg_primary};
-        color: #000000 !important;
-        transition: background 0.3s ease;
+        color: {text_color} !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
     /* ---------- HEADER WITH EXTRA MARGIN ---------- */
@@ -86,10 +85,9 @@ st.markdown(f"""
         color: white;
         text-align: center;
         margin-bottom: 0.8rem;
-        margin-top: 1.8rem;
-        box-shadow: 0 8px 40px rgba(102, 126, 234, 0.4);
-        border: 1px solid rgba(255,255,255,0.15);
-        backdrop-filter: blur(4px);
+        margin-top: 1.6rem;
+        box-shadow: 0 8px 40px rgba(102, 126, 234, 0.35);
+        border: 1px solid rgba(255,255,255,0.2);
         position: relative;
         overflow: hidden;
     }}
@@ -100,7 +98,7 @@ st.markdown(f"""
         left: -50%;
         width: 200%;
         height: 200%;
-        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1) 0%, transparent 60%);
+        background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15) 0%, transparent 60%);
         pointer-events: none;
         animation: shine 10s linear infinite;
     }}
@@ -123,7 +121,7 @@ st.markdown(f"""
         letter-spacing: -0.5px;
         margin: 0;
         line-height: 1.2;
-        text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        text-shadow: 0 2px 20px rgba(0,0,0,0.25);
         position: relative;
         z-index: 2;
         color: white !important;
@@ -138,11 +136,20 @@ st.markdown(f"""
         z-index: 2;
         color: white !important;
     }}
+    /* ---------- ALL TEXT ELEMENTS ---------- */
+    .stMarkdown, .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, 
+    .stMarkdown h4, .stMarkdown h5, .stMarkdown h6, .stMarkdown li, .stMarkdown blockquote,
+    .stTextInput label, .stDateInput label, .stSelectbox label, .stSlider label,
+    .stCheckbox label, .stRadio label, .stTextArea label {{
+        color: {text_color} !important;
+    }}
+    .stCaption {{
+        color: #555555 !important;
+    }}
     /* ---------- CARDS ---------- */
     .glass-card {{
         background: {card_bg};
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        backdrop-filter: blur(8px);
         border-radius: 12px;
         padding: 0.2rem 0.5rem;
         margin-bottom: 0.2rem;
@@ -156,16 +163,14 @@ st.markdown(f"""
     }}
     /* ---------- SLOT CARDS ---------- */
     .slot-card {{
-        background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.06));
         border-radius: 10px;
         padding: 0.1rem 0.4rem;
         margin-bottom: 0.1rem;
         border: 1px solid {border_color};
-        box-shadow: 0 2px 10px {shadow_color};
+        box-shadow: 0 2px 8px {shadow_color};
         transition: all 0.2s ease;
-        color: #000000 !important;
+        color: {text_color} !important;
         display: flex;
         align-items: center;
         flex-wrap: wrap;
@@ -173,21 +178,21 @@ st.markdown(f"""
     }}
     .slot-card:hover {{
         transform: scale(1.005);
-        box-shadow: 0 4px 16px rgba(102,126,234,0.2);
-        border-color: rgba(102,126,234,0.4);
+        box-shadow: 0 4px 16px rgba(102,126,234,0.15);
+        border-color: rgba(102,126,234,0.3);
     }}
     .slot-label {{
         font-weight: 600;
         font-size: 0.7rem;
-        color: #000000 !important;
+        color: {text_color} !important;
         min-width: 70px;
         margin-right: 4px;
         letter-spacing: 0.2px;
     }}
     .lunch-card {{
-        background: linear-gradient(135deg, rgba(255,193,7,0.15), rgba(255,152,0,0.15));
-        border: 1px solid rgba(255,193,7,0.3);
-        color: #000000 !important;
+        background: linear-gradient(135deg, rgba(255,193,7,0.12), rgba(255,152,0,0.12));
+        border: 1px solid rgba(255,193,7,0.2);
+        color: {text_color} !important;
     }}
     /* ---------- BUTTONS ---------- */
     .stButton button {{
@@ -205,8 +210,6 @@ st.markdown(f"""
         width: 100% !important;
         touch-action: manipulation !important;
         letter-spacing: 0.3px;
-        position: relative;
-        overflow: hidden;
     }}
     .stButton button:hover {{
         transform: scale(1.02);
@@ -245,30 +248,27 @@ st.markdown(f"""
     /* ---------- SIDEBAR ---------- */
     .css-1d391kg {{
         background: {bg_secondary} !important;
-        backdrop-filter: blur(16px) !important;
-        -webkit-backdrop-filter: blur(16px) !important;
-        color: #000000 !important;
+        backdrop-filter: blur(12px);
+        color: {text_color} !important;
         padding: 0.15rem 0.25rem !important;
         border-right: 1px solid {border_color} !important;
         box-shadow: 4px 0 30px {shadow_color} !important;
-        transition: all 0.3s ease;
     }}
     .css-1d391kg * {{
         font-size: 0.75rem !important;
-        color: #000000 !important;
+        color: {text_color} !important;
     }}
     .css-1d391kg .stSelectbox select,
     .css-1d391kg .stTextInput input,
     .css-1d391kg .stDateInput input {{
         background: #ffffff !important;
-        color: #000000 !important;
+        color: {text_color} !important;
         border: 1px solid #cccccc !important;
         border-radius: 8px !important;
         font-size: 0.75rem !important;
         padding: 0.2rem 0.4rem !important;
         height: 32px !important;
         width: 100% !important;
-        transition: border 0.3s ease;
     }}
     .css-1d391kg .stSelectbox select:focus,
     .css-1d391kg .stTextInput input:focus,
@@ -284,30 +284,26 @@ st.markdown(f"""
         height: 30px !important;
         border: 1px solid #cccccc !important;
         border-radius: 8px !important;
-        backdrop-filter: blur(4px) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
         min-height: 30px !important;
-        transition: all 0.3s ease;
     }}
     .css-1d391kg .stButton button:hover {{
         background: rgba(108, 99, 255, 1) !important;
-        transform: scale(1.02);
     }}
     /* ---------- MAIN INPUTS ---------- */
     .stTextInput input, .stDateInput input, .stSelectbox select {{
         background: #ffffff !important;
-        color: #000000 !important;
+        color: {text_color} !important;
         border: 1px solid #cccccc !important;
         border-radius: 10px !important;
         font-size: 0.8rem !important;
         padding: 0.25rem 0.5rem !important;
         height: 36px !important;
         width: 100% !important;
-        transition: border 0.3s ease, box-shadow 0.3s ease;
     }}
     .stTextInput input:focus, .stDateInput input:focus, .stSelectbox select:focus {{
         border-color: #6C63FF !important;
-        box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.12) !important;
+        box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.1) !important;
     }}
     /* ---------- PREVIEW TABLE ---------- */
     .preview-table {{
@@ -315,7 +311,7 @@ st.markdown(f"""
         border-collapse: collapse;
         margin-top: 4px;
         font-size: 10px;
-        color: #000000 !important;
+        color: {text_color} !important;
         border-radius: 10px;
         overflow: hidden;
         box-shadow: 0 2px 12px {shadow_color};
@@ -326,25 +322,17 @@ st.markdown(f"""
         border: 1px solid {table_border};
         padding: 3px 6px;
         text-align: left;
-        color: #000000 !important;
-        letter-spacing: 0.3px;
+        color: {text_color} !important;
     }}
     .preview-table td {{
         border: 1px solid {table_border};
         padding: 3px 6px;
         text-align: left;
         background: {preview_bg};
-        color: #000000 !important;
+        color: {text_color} !important;
     }}
     .preview-table tr:hover td {{
-        background: rgba(108, 99, 255, 0.05);
-    }}
-    /* ---------- LABELS & HEADINGS ---------- */
-    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown p {{
-        color: #000000 !important;
-    }}
-    .stMarkdown .caption {{
-        color: #333333 !important;
+        background: rgba(108, 99, 255, 0.04);
     }}
     /* ---------- COMPACT MOBILE ---------- */
     @media (max-width: 768px) {{
@@ -405,7 +393,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= HEADER WITH EXTRA MARGIN =================
+# ================= HEADER =================
 st.markdown("""
 <div class="main-header">
     <h1>✨ EOD Report Generator</h1>
@@ -417,14 +405,12 @@ st.markdown("""
 def parse_date(date_str):
     if not date_str:
         return datetime.now().date()
-    # Try dd/mm/yyyy first
     match = re.search(r'(\d{2})/(\d{2})/(\d{4})', date_str)
     if match:
         try:
             return datetime.strptime(match.group(0), "%d/%m/%Y").date()
         except ValueError:
             pass
-    # Fallback to yyyy-mm-dd
     match = re.search(r'(\d{4}-\d{2}-\d{2})', date_str)
     if match:
         try:
@@ -922,7 +908,6 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
             ws['B4'] = "Position"
             ws['C4'] = schedule_data.get("position", DEFAULT_POSITION)
             ws['B5'] = "Date"
-            # Format date as dd/mm/yyyy
             date_val = schedule_data.get("date")
             if isinstance(date_val, str):
                 try:
@@ -975,7 +960,6 @@ def create_excel_from_schedule(schedule_data, template_bytes=None, time_slots=No
 
     safe_write('C3', schedule_data.get("employee_name", DEFAULT_EMPLOYEE))
     safe_write('C4', schedule_data.get("position", DEFAULT_POSITION))
-    # Format date
     date_val = schedule_data.get("date")
     if isinstance(date_val, str):
         try:
@@ -1067,7 +1051,6 @@ def create_fallback_pdf(schedule_data, time_slots=None):
         ["Position", schedule_data.get("position", "N/A")],
         ["Date", schedule_data.get("date", "N/A")]
     ]
-    # Format date in PDF
     date_val = schedule_data.get("date")
     if isinstance(date_val, str):
         try:
@@ -1375,7 +1358,6 @@ with left_col:
         st.session_state.selected_employee_position = DEFAULT_POSITION
 
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
-    # Date input with dd/mm/yyyy format
     report_date = st.date_input("📅 Date", value=datetime.now(), format="DD/MM/YYYY")
 
     st.markdown("### 📝 Task per Time Slot")
