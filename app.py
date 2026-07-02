@@ -37,6 +37,8 @@ if "theme" not in st.session_state:
 
 st.session_state.setdefault("selected_employee_name", "Omkar Patil")
 st.session_state.setdefault("selected_employee_position", "Social Media & Digital Marketing Executive")
+st.session_state.setdefault("loaded_report", None)
+st.session_state.setdefault("loaded_date", None)
 
 def toggle_theme():
     st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
@@ -1167,7 +1169,6 @@ saved_api_key = config.get("api_key", "")
 # ---- Sidebar ----
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/google-forms.png", width=25)
-    # Theme toggle button
     theme_label = "☀️ Light" if st.session_state.theme == "dark" else "🌙 Dark"
     if st.button(f"Switch to {theme_label} Theme", use_container_width=True):
         toggle_theme()
@@ -1349,7 +1350,31 @@ with st.sidebar:
         if "loaded_report" in st.session_state and st.session_state.loaded_report is not None:
             if st.button("🗑️ Clear loaded", use_container_width=True):
                 st.session_state.loaded_report = None
+                st.session_state.current_schedule = None
+                st.session_state.loaded_date = None
                 st.rerun()
+
+# ---- Load history if present ----
+if st.session_state.get("loaded_report") is not None:
+    report = st.session_state.loaded_report
+    # Update employee, position, date
+    st.session_state.selected_employee_name = report["employee_name"]
+    st.session_state.selected_employee_position = report["position"]
+    # Parse date and store for date input
+    try:
+        st.session_state.loaded_date = parse_date(report["date"])
+    except:
+        st.session_state.loaded_date = datetime.now()
+    # Set the current schedule to the loaded one
+    st.session_state.current_schedule = report["schedule"]
+    # Also set last_schedule so that download buttons work
+    st.session_state.last_schedule = {
+        "employee_name": report["employee_name"],
+        "position": report["position"],
+        "date": report["date"],
+        "schedule": report["schedule"]
+    }
+    # We keep loaded_report so that we can show a "Clear loaded" button.
 
 # ---- Session state ----
 if "loaded_report" not in st.session_state:
@@ -1364,6 +1389,8 @@ if "current_schedule" not in st.session_state:
     st.session_state.current_schedule = None
 if "raw_response" not in st.session_state:
     st.session_state.raw_response = None
+if "loaded_date" not in st.session_state:
+    st.session_state.loaded_date = None
 
 # ---- Main area ----
 left_col, right_col = st.columns([0.4, 0.6], gap="small")
@@ -1386,7 +1413,9 @@ with left_col:
         st.session_state.selected_employee_position = DEFAULT_POSITION
 
     position = st.text_input("💼 Position", value=st.session_state.selected_employee_position)
-    report_date = st.date_input("📅 Date", value=datetime.now(), format="DD/MM/YYYY")
+    # Use loaded date if available, else today
+    default_date = st.session_state.loaded_date if st.session_state.loaded_date is not None else datetime.now()
+    report_date = st.date_input("📅 Date", value=default_date, format="DD/MM/YYYY")
 
     st.markdown("### 📝 Task per Time Slot")
     st.caption("Type your task after each time. Use '-' to indicate nothing was done.")
