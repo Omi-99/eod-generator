@@ -688,6 +688,17 @@ def rebuild_schedule_for_lunch(lunch_hour, old_schedule):
             new_schedule.append({"slot": slot_label, "activity": "No specific task", "description": "No description provided."})
     return new_schedule
 
+def get_hour_from_slot_label(slot_label):
+    match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
+    if match:
+        hour = int(match.group(1))
+        if match.group(2) == 'pm' and hour != 12:
+            hour += 12
+        elif match.group(2) == 'am' and hour == 12:
+            hour = 0
+        return hour
+    return None
+
 def extract_and_clean_json(raw_text):
     raw_text = re.sub(r'```json\s*', '', raw_text)
     raw_text = re.sub(r'```\s*', '', raw_text)
@@ -718,18 +729,6 @@ def extract_and_clean_json(raw_text):
     except:
         pass
     raise ValueError("Could not parse JSON")
-
-# ============= HELPER: get hour from slot label =============
-def get_hour_from_slot_label(slot_label):
-    match = re.match(r'(\d{1,2}):00 (am|pm)', slot_label.split(' to ')[0])
-    if match:
-        hour = int(match.group(1))
-        if match.group(2) == 'pm' and hour != 12:
-            hour += 12
-        elif match.group(2) == 'am' and hour == 12:
-            hour = 0
-        return hour
-    return None
 
 # ============= AI GENERATION =============
 def generate_schedule(user_tasks, employee_name, position, report_date, provider, api_key, model_name, lunch_hour, progress_callback=None):
@@ -1297,7 +1296,7 @@ with st.sidebar:
         st.success(f"Saved '{uploaded_file.name}' to templates folder.")
         st.rerun()
 
-    # ---- CLEAR LOADED BUTTON ----
+    # ---- CLEAR LOADED BUTTON (optional) ----
     if st.session_state.get("loaded_report") is not None:
         if st.button("🗑️ Clear loaded", use_container_width=True):
             st.session_state.loaded_report = None
@@ -1336,7 +1335,6 @@ with st.sidebar:
                             st.session_state.loaded_report = entry
                             # Populate slot_tasks by matching hour to current slots
                             current_slots = get_time_slots(lunch_hour)
-                            # Build hour->current slot mapping
                             hour_to_current_slot = {}
                             for slot in current_slots:
                                 h = get_hour_from_slot_label(slot)
@@ -1658,6 +1656,10 @@ if generate_clicked or regenerate_clicked:
         for entry in data["schedule"]:
             full_slot = entry["slot"]
             st.session_state.slot_tasks[full_slot] = entry["activity"]
+
+        # Clear the loaded_report flag so the "Clear loaded" button disappears
+        st.session_state.loaded_report = None
+        st.session_state.loaded_date = None
 
         sparkle()
         st.success("✅ Report generated successfully! ✨")
