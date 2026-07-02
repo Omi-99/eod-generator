@@ -33,30 +33,51 @@ st.markdown("""
 
 # ================= THEME STATE =================
 if "theme" not in st.session_state:
-    st.session_state.theme = "light"  # default to light for best readability
+    st.session_state.theme = "light"
 
 st.session_state.setdefault("selected_employee_name", "Omkar Patil")
 st.session_state.setdefault("selected_employee_position", "Social Media & Digital Marketing Executive")
 
 def toggle_theme():
-    st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
+    st.session_state.theme = "dark" if st.session_state.theme == "light" else "light"
+    st.rerun()
 
 # ================= THEME VARIABLES =================
 theme = st.session_state.theme
-# Professional light background with dark text
-bg_primary = "#f8f9fa"   # soft off-white
-bg_secondary = "#ffffff"
-text_color = "#1a1a1a"   # consistent dark text
-card_bg = "rgba(255,255,255,0.9)"
-border_color = "rgba(0,0,0,0.08)"
-shadow_color = "rgba(0,0,0,0.08)"
-header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
-preview_bg = "#ffffff"
-preview_border = "#e0e0e0"
-table_header_bg = "#f0f2f6"
-table_border = "#d0d0d0"
+if theme == "light":
+    bg_primary = "#f8f9fa"
+    bg_secondary = "#ffffff"
+    text_color = "#1a1a1a"
+    card_bg = "rgba(255,255,255,0.9)"
+    border_color = "rgba(0,0,0,0.08)"
+    shadow_color = "rgba(0,0,0,0.08)"
+    input_bg = "#ffffff"
+    input_text = "#1a1a1a"
+    input_border = "#cccccc"
+    table_header_bg = "#f0f2f6"
+    table_border = "#d0d0d0"
+    slot_bg = "rgba(102,126,234,0.06)"
+    lunch_bg = "rgba(255,193,7,0.12)"
+else:  # dark
+    bg_primary = "#0e1117"
+    bg_secondary = "#1e1e2a"
+    text_color = "#f0f0f0"
+    card_bg = "rgba(30,30,50,0.7)"
+    border_color = "rgba(255,255,255,0.1)"
+    shadow_color = "rgba(0,0,0,0.4)"
+    input_bg = "#2a2a3a"
+    input_text = "#f0f0f0"
+    input_border = "#444466"
+    table_header_bg = "#2a2a3e"
+    table_border = "#444466"
+    slot_bg = "rgba(102,126,234,0.15)"
+    lunch_bg = "rgba(255,193,7,0.15)"
 
-# ================= PROFESSIONAL, UNIFIED CSS =================
+header_grad = "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)"
+preview_bg = bg_secondary
+preview_border = border_color
+
+# ================= PROFESSIONAL, THEME-AWARE CSS =================
 st.markdown(f"""
 <style>
     /* ---------- GLOBAL ---------- */
@@ -74,8 +95,9 @@ st.markdown(f"""
         background: {bg_primary};
         color: {text_color} !important;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        transition: background 0.3s ease, color 0.3s ease;
     }}
-    /* ---------- HEADER WITH EXTRA MARGIN ---------- */
+    /* ---------- HEADER ---------- */
     .main-header {{
         background: {header_grad};
         background-size: 300% 300%;
@@ -144,7 +166,8 @@ st.markdown(f"""
         color: {text_color} !important;
     }}
     .stCaption {{
-        color: #555555 !important;
+        color: {text_color} !important;
+        opacity: 0.7;
     }}
     /* ---------- CARDS ---------- */
     .glass-card {{
@@ -163,7 +186,7 @@ st.markdown(f"""
     }}
     /* ---------- SLOT CARDS ---------- */
     .slot-card {{
-        background: linear-gradient(135deg, rgba(102,126,234,0.06), rgba(118,75,162,0.06));
+        background: {slot_bg};
         border-radius: 10px;
         padding: 0.1rem 0.4rem;
         margin-bottom: 0.1rem;
@@ -190,7 +213,7 @@ st.markdown(f"""
         letter-spacing: 0.2px;
     }}
     .lunch-card {{
-        background: linear-gradient(135deg, rgba(255,193,7,0.12), rgba(255,152,0,0.12));
+        background: {lunch_bg};
         border: 1px solid rgba(255,193,7,0.2);
         color: {text_color} !important;
     }}
@@ -253,6 +276,7 @@ st.markdown(f"""
         padding: 0.15rem 0.25rem !important;
         border-right: 1px solid {border_color} !important;
         box-shadow: 4px 0 30px {shadow_color} !important;
+        transition: background 0.3s ease, color 0.3s ease;
     }}
     .css-1d391kg * {{
         font-size: 0.75rem !important;
@@ -261,14 +285,15 @@ st.markdown(f"""
     .css-1d391kg .stSelectbox select,
     .css-1d391kg .stTextInput input,
     .css-1d391kg .stDateInput input {{
-        background: #ffffff !important;
-        color: {text_color} !important;
-        border: 1px solid #cccccc !important;
+        background: {input_bg} !important;
+        color: {input_text} !important;
+        border: 1px solid {input_border} !important;
         border-radius: 8px !important;
         font-size: 0.75rem !important;
         padding: 0.2rem 0.4rem !important;
         height: 32px !important;
         width: 100% !important;
+        transition: background 0.3s ease, color 0.3s ease, border 0.3s ease;
     }}
     .css-1d391kg .stSelectbox select:focus,
     .css-1d391kg .stTextInput input:focus,
@@ -282,24 +307,26 @@ st.markdown(f"""
         font-size: 0.7rem !important;
         padding: 0.2rem 0.4rem !important;
         height: 30px !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid {input_border} !important;
         border-radius: 8px !important;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
         min-height: 30px !important;
+        transition: background 0.3s ease;
     }}
     .css-1d391kg .stButton button:hover {{
         background: rgba(108, 99, 255, 1) !important;
     }}
     /* ---------- MAIN INPUTS ---------- */
     .stTextInput input, .stDateInput input, .stSelectbox select {{
-        background: #ffffff !important;
-        color: {text_color} !important;
-        border: 1px solid #cccccc !important;
+        background: {input_bg} !important;
+        color: {input_text} !important;
+        border: 1px solid {input_border} !important;
         border-radius: 10px !important;
         font-size: 0.8rem !important;
         padding: 0.25rem 0.5rem !important;
         height: 36px !important;
         width: 100% !important;
+        transition: background 0.3s ease, color 0.3s ease, border 0.3s ease;
     }}
     .stTextInput input:focus, .stDateInput input:focus, .stSelectbox select:focus {{
         border-color: #6C63FF !important;
@@ -1140,9 +1167,10 @@ saved_api_key = config.get("api_key", "")
 # ---- Sidebar ----
 with st.sidebar:
     st.image("https://img.icons8.com/fluency/96/000000/google-forms.png", width=25)
-    if st.button(f"🌓 Switch to {'Light' if st.session_state.theme == 'dark' else 'Dark'} Theme", use_container_width=True):
+    # Theme toggle button
+    theme_label = "☀️ Light" if st.session_state.theme == "dark" else "🌙 Dark"
+    if st.button(f"Switch to {theme_label} Theme", use_container_width=True):
         toggle_theme()
-        st.rerun()
 
     # ---- Lunch Break Slider ----
     st.markdown("## 🕒 Lunch Break")
